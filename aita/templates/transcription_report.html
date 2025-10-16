@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcription Report - {{ student_name }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header .meta {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-card .label {
+            font-size: 0.9em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .qa-pair {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .qa-pair h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .qa-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .question-panel,
+        .answer-panel {
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .question-panel {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+        }
+
+        .answer-panel {
+            background: #fff8f0;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .panel-header {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .points-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .question-text {
+            font-size: 1.05em;
+            line-height: 1.8;
+            color: #444;
+            white-space: pre-wrap;
+        }
+
+        .answer-text {
+            font-size: 1.05em;
+            line-height: 1.8;
+            color: #444;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        .no-answer {
+            color: #999;
+            font-style: italic;
+        }
+
+        .confidence-bar {
+            margin-top: 15px;
+        }
+
+        .confidence-bar .label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .confidence-bar .bar {
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .confidence-bar .fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .confidence-high {
+            background: #10b981;
+        }
+
+        .confidence-medium {
+            background: #f59e0b;
+        }
+
+        .confidence-low {
+            background: #ef4444;
+        }
+
+        .notes {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f3f4f6;
+            border-radius: 5px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        @media (max-width: 968px) {
+            .qa-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>{{ student_name }}</h1>
+            <div class="meta">
+                <div>{{ exam_name }}</div>
+                <div>Generated: {{ generation_time }}</div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="label">Questions</div>
+                <div class="value">{{ answered_questions }}/{{ total_questions }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Coverage</div>
+                <div class="value">{{ "%.1f"|format(stats.coverage_percent) }}%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Avg Confidence</div>
+                <div class="value">{{ "%.0f"|format(stats.average_confidence * 100) }}%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Total Points</div>
+                <div class="value">{{ total_points }}</div>
+            </div>
+        </div>
+
+        <!-- Question/Answer Pairs -->
+        {% for qa in qa_pairs %}
+        <div class="qa-pair">
+            <h2>Question {{ qa.question_id }}</h2>
+            <div class="qa-grid">
+                <!-- Question Panel -->
+                <div class="question-panel">
+                    <div class="panel-header">
+                        <span>Question</span>
+                        <span class="points-badge">{{ qa.points }} points</span>
+                    </div>
+                    <div class="question-text">{{ qa.question_text }}</div>
+                    {% if qa.page_number %}
+                    <div class="notes">Page {{ qa.page_number }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Answer Panel -->
+                <div class="answer-panel">
+                    <div class="panel-header">
+                        <span>Student Answer</span>
+                    </div>
+                    <div class="answer-text {% if not qa.has_answer %}no-answer{% endif %}">
+                        {{ qa.answer_text }}
+                    </div>
+
+                    {% if qa.has_answer %}
+                    <div class="confidence-bar">
+                        <div class="label">Transcription Confidence: {{ "%.0f"|format(qa.confidence * 100) }}%</div>
+                        <div class="bar">
+                            <div class="fill {% if qa.confidence >= 0.8 %}confidence-high{% elif qa.confidence >= 0.5 %}confidence-medium{% else %}confidence-low{% endif %}"
+                                 style="width: {{ qa.confidence * 100 }}%"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if qa.transcription_notes %}
+                    <div class="notes">{{ qa.transcription_notes }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

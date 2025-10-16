@@ -1,0 +1,9 @@
+{
+  "1a": "Focus on correct application of derivative rules. Award full credit for f'(x) = 2x + 3 with clear work. Deduct 1 point if steps are missing but answer is correct.",
+
+  "1b": "Look for accurate definition of limits and intuitive understanding. Students should explain the concept clearly with examples. Accept various valid explanations of approaching a value.",
+
+  "2a": "This is a proof question - emphasize logical structure and validity of reasoning. Full credit requires starting from definition and showing each step clearly. Partial credit for correct approach even if proof is incomplete.",
+
+  "3c": "Application problem requiring multiple steps. Break down points as: setup (30%), calculation (50%), interpretation (20%). Must include proper units and context in final answer."
+}

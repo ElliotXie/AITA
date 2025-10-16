@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aita"
+version = "0.1.0"
+description = "Automatic Image Test Analysis system for grading handwritten exams"
+authors = [{name = "AITA Team"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "typer[all]>=0.9.0",
+    "pydantic>=2.0.0",
+    "pillow>=10.0.0",
+    "easyocr>=1.7.0",
+    "fuzzywuzzy[speedup]>=0.18.0",
+    "google-cloud-storage>=2.10.0",
+    "openai>=1.0.0",
+    "jinja2>=3.1.0",
+    "rich>=13.0.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
+    "tqdm>=4.65.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+]
+
+[project.scripts]
+aita = "aita.main:app"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/aita"
+Repository = "https://github.com/yourusername/aita"
+Issues = "https://github.com/yourusername/aita/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["aita*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=aita --cov-report=term-missing"

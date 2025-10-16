@@ -1,0 +1,66 @@
+{
+  "1a": {
+    "total_points": 10,
+    "criteria": [
+      {
+        "points": 5,
+        "description": "Correctly applies the derivative formula",
+        "examples": [
+          "Uses power rule: d/dx(x²) = 2x",
+          "Uses sum rule: d/dx(x² + 3x) = d/dx(x²) + d/dx(3x)",
+          "Identifies f'(x) = 2x + 3"
+        ]
+      },
+      {
+        "points": 3,
+        "description": "Shows clear work and steps",
+        "examples": [
+          "Lists each step of differentiation",
+          "Explains which rules are being applied",
+          "Work is organized and easy to follow"
+        ]
+      },
+      {
+        "points": 2,
+        "description": "Final answer is correct and complete",
+        "examples": [
+          "f'(x) = 2x + 3",
+          "dy/dx = 2x + 3",
+          "Includes proper notation"
+        ]
+      }
+    ]
+  },
+  "2b": {
+    "total_points": 15,
+    "criteria": [
+      {
+        "points": 8,
+        "description": "Demonstrates understanding of the concept",
+        "examples": [
+          "Defines limit accurately",
+          "Explains intuitive meaning",
+          "Uses appropriate mathematical language"
+        ]
+      },
+      {
+        "points": 4,
+        "description": "Provides relevant examples or applications",
+        "examples": [
+          "Shows limit approaching a value",
+          "Gives example with x→0 or x→∞",
+          "Relates to continuity or derivatives"
+        ]
+      },
+      {
+        "points": 3,
+        "description": "Clear and well-organized explanation",
+        "examples": [
+          "Logical flow of ideas",
+          "Proper use of mathematical notation",
+          "Easy to understand"
+        ]
+      }
+    ]
+  }
+}
