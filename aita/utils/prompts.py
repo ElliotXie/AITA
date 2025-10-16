@@ -184,13 +184,11 @@ Format your response as JSON:
 {
   "correct_answer": "string (the final correct answer)",
   "solution_steps": [
-    "string (step 1 description)",
-    "string (step 2 description)",
     "..."
   ],
   "alternative_answers": ["string (alternative acceptable answers)"],
   "explanation": "string (detailed explanation of the solution approach)",
-  "grading_notes": "string (important notes for graders about partial credit, common mistakes, etc.)"
+  "grading_notes": "string (important notes for graders about partial credit)"
 }
 
 Guidelines:
@@ -198,7 +196,9 @@ Guidelines:
 - Include mathematical notation and formulas where relevant
 - Consider multiple valid solution approaches
 - Provide clear grading guidance for partial credit
-- Note common student mistakes to watch for
+- Keep grading notes concise and focused on what students should demonstrate
+
+
 """
 
 SINGLE_RUBRIC_GENERATION_PROMPT = """
@@ -222,12 +222,19 @@ Format your response as JSON:
   ]
 }
 
+CRITICAL REQUIREMENT:
+- The sum of ALL criteria points MUST EXACTLY EQUAL the total_points value
+- Verify that criteria[0].points + criteria[1].points + ... = total_points
+- Do NOT create criteria that sum to more or less than the question's point value
+
 Grading principles:
-- Be fair and consistent across similar questions
+- Be fair and consistent
 - Provide clear, objective criteria
 - Allow for partial credit where appropriate
 - Consider different valid approaches to the problem
-- Include common mistake patterns and point deductions
+
+Example: For a 4-point question, if you have 3 items worth 1.5, 1.5, and 1.0 points, they sum to 4.0. ✓
+Example: For a 4-point question, if you have items worth 1, 2, and 2 points, they sum to 5.0. ✗ WRONG - Must equal 4.0
 """
 
 GRADING_NOTES_FORMAT_PROMPT = """
@@ -237,23 +244,19 @@ You are an expert grader preparing structured guidance for other graders. Rewrit
   <partialCreditRules>
     <item>
       <description>string</description>
-      <points>number-or-empty</points>
+      <points>number</points>
     </item>
   </partialCreditRules>
-  <deductions>
-    <item>
-      <description>string</description>
-      <pointsLost>number-or-empty</pointsLost>
-    </item>
-  </deductions>
 </gradingNotes>
 
-Formatting requirements:
+CRITICAL REQUIREMENTS:
+- The points in ALL <item> elements MUST sum EXACTLY to the question's total points
+- Each <item> must have a numeric <points> value (cannot be empty)
+- The sum of all points values across all items must equal the question's point value
 - Respond with XML ONLY. Do not add markdown fences or commentary.
-- Always include both container elements, even when they have no items (emit empty container elements).
-- Within list containers, output one <item> per entry in the original notes, preserving the order.
-- Leave <points> and <pointsLost> empty when no precise value is provided in the source notes.
-- Keep descriptions concise but clear so they can be validated automatically later.
+- Within the container, output one <item> per partial credit criterion
+- Keep descriptions concise but clear
+- Sometimes the grade notes will state the full points first, dont count that!
 """
 
 

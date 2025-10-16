@@ -35,10 +35,15 @@ class TaskResult:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
+        # Serialize result if it has a to_dict method
+        serialized_result = self.result
+        if hasattr(self.result, 'to_dict') and callable(self.result.to_dict):
+            serialized_result = self.result.to_dict()
+
         return {
             "task_id": self.task_id,
             "success": self.success,
-            "result": self.result,
+            "result": serialized_result,
             "raw_response": self.raw_response,
             "error": self.error,
             "retry_count": self.retry_count,

@@ -91,18 +91,13 @@ def _grading_notes_xml_to_dict(xml_text: str) -> Dict[str, Any]:
     partial_credit_container = root.find("partialCreditRules")
     if partial_credit_container is not None:
         for item in partial_credit_container.findall("item"):
+            points = _parse_optional_number(item.findtext("points"))
+            if points is None:
+                logger.warning("Found partial credit item with no points value, skipping")
+                continue
             data["partial_credit_rules"].append({
                 "description": (item.findtext("description") or "").strip(),
-                "points": _parse_optional_number(item.findtext("points"))
-            })
-
-    data["deductions"] = []
-    deductions_container = root.find("deductions")
-    if deductions_container is not None:
-        for item in deductions_container.findall("item"):
-            data["deductions"].append({
-                "description": (item.findtext("description") or "").strip(),
-                "points_lost": _parse_optional_number(item.findtext("pointsLost"))
+                "points": points
             })
 
     return data
@@ -241,11 +236,11 @@ class RubricGenerationPipeline:
             console.print(f"   📂 Loaded user inputs: {len(user_inputs['rubrics'])} rubrics, {len(user_inputs['instructions'])} instructions")
 
             # Step 3: Generate answer keys
-            raw_answer_keys, answer_keys = self._generate_answer_keys(exam_spec, user_inputs)
+            raw_answer_keys, answer_keys = self._generate_answer_keys(exam_spec, user_inputs, force_regenerate)
             console.print(f"   ✅ Generated {len(answer_keys)} answer keys")
 
             # Step 4: Generate rubrics
-            rubrics = self._generate_rubrics(exam_spec, user_inputs, answer_keys)
+            rubrics = self._generate_rubrics(exam_spec, user_inputs, answer_keys, force_regenerate)
             console.print(f"   ✅ Generated {len(rubrics)} rubrics")
 
             # Step 5: Save results
@@ -350,9 +345,15 @@ class RubricGenerationPipeline:
     def _generate_answer_keys(
         self,
         exam_spec: ExamSpec,
-        user_inputs: Dict[str, Any]
+        user_inputs: Dict[str, Any],
+        force_regenerate: bool = False
     ) -> Tuple[List[AnswerKey], List[AnswerKey]]:
         """Generate answer keys for all questions using parallel executor.
+
+        Args:
+            exam_spec: Exam specification with questions
+            user_inputs: User-provided instructions and rubrics
+            force_regenerate: Whether to ignore existing checkpoints
 
         Returns:
             Tuple of (raw_answer_keys, formatted_answer_keys)
@@ -364,10 +365,11 @@ class RubricGenerationPipeline:
             question_instructions=user_inputs['question_instructions']
         )
 
-        # Execute in parallel
+        # Execute in parallel (skip checkpoint resume if forcing regeneration)
         result = self.executor.execute_batch(
             tasks=tasks,
-            checkpoint_name=f"answer_keys_{len(tasks)}_questions"
+            checkpoint_name=f"answer_keys_{len(tasks)}_questions",
+            resume_from_checkpoint=not force_regenerate
         )
 
         # Convert task results to answer keys
@@ -474,9 +476,17 @@ class RubricGenerationPipeline:
         self,
         exam_spec: ExamSpec,
         user_inputs: Dict[str, Any],
-        answer_keys: List[AnswerKey]
+        answer_keys: List[AnswerKey],
+        force_regenerate: bool = False
     ) -> List[Rubric]:
-        """Generate rubrics for all questions using parallel executor."""
+        """Generate rubrics for all questions using parallel executor.
+
+        Args:
+            exam_spec: Exam specification with questions
+            user_inputs: User-provided instructions and rubrics
+            answer_keys: Generated answer keys
+            force_regenerate: Whether to ignore existing checkpoints
+        """
         rubrics = []
         answer_key_dict = {ak.question_id: ak for ak in answer_keys}
 
@@ -503,10 +513,11 @@ class RubricGenerationPipeline:
                 question_instructions=user_inputs['question_instructions']
             )
 
-            # Execute in parallel
+            # Execute in parallel (skip checkpoint resume if forcing regeneration)
             result = self.executor.execute_batch(
                 tasks=tasks,
-                checkpoint_name=f"rubrics_{len(tasks)}_questions"
+                checkpoint_name=f"rubrics_{len(tasks)}_questions",
+                resume_from_checkpoint=not force_regenerate
             )
 
             # Convert task results to rubrics
@@ -865,17 +876,12 @@ def _ensure_grading_notes_structure(data: Dict[str, Any]) -> Dict[str, Any]:
 
     structured["partial_credit_rules"] = []
     for item in data.get("partial_credit_rules", []):
-        structured["partial_credit_rules"].append({
-            "description": str(item.get("description", "")).strip(),
-            "points": item.get("points")
-        })
-
-    structured["deductions"] = []
-    for item in data.get("deductions", []):
-        structured["deductions"].append({
-            "description": str(item.get("description", "")).strip(),
-            "points_lost": item.get("points_lost")
-        })
+        points = item.get("points")
+        if points is not None:
+            structured["partial_credit_rules"].append({
+                "description": str(item.get("description", "")).strip(),
+                "points": points
+            })
 
     return structured
 

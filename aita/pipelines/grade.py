@@ -6,6 +6,7 @@ Processes transcribed student answers and produces detailed grading results.
 """
 
 import json
+import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 import logging
@@ -30,6 +31,24 @@ from aita.utils.llm_task_implementations import (
 
 logger = logging.getLogger(__name__)
 console = Console()
+
+
+def sort_question_id(question_id: str) -> Tuple[int, str]:
+    """
+    Sort key function for question IDs like '1a', '1b', '2a', '10b', etc.
+
+    Args:
+        question_id: Question identifier (e.g., '1a', '2b', '10c')
+
+    Returns:
+        Tuple of (numeric_part, letter_part) for sorting
+    """
+    match = re.match(r'(\d+)([a-z]*)', question_id.lower())
+    if match:
+        num_part = int(match.group(1))
+        letter_part = match.group(2) or ''
+        return (num_part, letter_part)
+    return (0, question_id)
 
 
 class GradingError(Exception):
@@ -65,13 +84,16 @@ class StudentGradingResult:
         else: return "F"
 
     def to_dict(self) -> Dict[str, Any]:
+        # Sort question grades by question ID
+        sorted_grades = sorted(self.question_grades, key=lambda g: sort_question_id(g.question_id))
+
         return {
             "student_name": self.student_name,
             "total_score": self.total_score,
             "total_possible": self.total_possible,
             "percentage": self.percentage,
             "grade_letter": self.grade_letter,
-            "question_grades": [grade.to_dict() for grade in self.question_grades],
+            "question_grades": [grade.to_dict() for grade in sorted_grades],
             "processing_time": self.processing_time,
             "errors": self.errors,
             "graded_at": datetime.now().isoformat()
@@ -327,7 +349,7 @@ class GradingPipeline:
 
             # Process results
             question_grades = []
-            for task, result in zip(tasks, results):
+            for task, result in zip(tasks, results.task_results):
                 if result.success and result.result:
                     question_grades.append(result.result)
                 else:
@@ -466,7 +488,9 @@ class GradingPipeline:
         with open(detailed_file, 'w') as f:
             json.dump(result.to_dict(), f, indent=2, ensure_ascii=False)
 
-        # Save summary
+        # Save summary with sorted question scores
+        sorted_grades = sorted(result.question_grades, key=lambda g: sort_question_id(g.question_id))
+
         summary_data = {
             "student_name": result.student_name,
             "assignment": self.assignment_name,
@@ -481,7 +505,7 @@ class GradingPipeline:
                     "possible": grade.points_possible,
                     "percentage": grade.percentage
                 }
-                for grade in result.question_grades
+                for grade in sorted_grades
             }
         }
 

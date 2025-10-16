@@ -25,6 +25,20 @@ from aita.utils.prompts import (
 )
 
 
+class JSONParsingError(Exception):
+    """Raised when LLM response cannot be parsed as valid JSON."""
+    pass
+
+
+class ScoreValidationError(Exception):
+    """Raised when rubric scores do not sum correctly or match question points."""
+
+    def __init__(self, message: str, criteria_sum: float = None, expected_total: float = None):
+        super().__init__(message)
+        self.criteria_sum = criteria_sum
+        self.expected_total = expected_total
+
+
 def timeout_handler(signum, frame):
     raise TimeoutError("JSON extraction timed out")
 
@@ -84,17 +98,23 @@ class AnswerKeyGenerationTask(LLMTask):
         self.question = question
         self.general_instructions = general_instructions
         self.question_instructions = question_instructions
+        self.json_retry_count = 0
+        self.max_json_retries = 3
 
     @property
     def task_id(self) -> str:
         return f"answer_key_{self.question.question_id}"
 
     def build_messages(self) -> List[LLMMessage]:
-        prompt = get_answer_key_generation_prompt(
-            question=self.question,
-            general_instructions=self.general_instructions,
-            question_instructions=self.question_instructions
-        )
+        # Use enhanced prompt if we're retrying due to JSON parsing errors
+        if self.json_retry_count > 0:
+            prompt = self._get_json_retry_prompt()
+        else:
+            prompt = get_answer_key_generation_prompt(
+                question=self.question,
+                general_instructions=self.general_instructions,
+                question_instructions=self.question_instructions
+            )
         return [LLMMessage(role="user", content=prompt)]
 
     def parse_response(self, response_text: str) -> AnswerKey:
@@ -114,11 +134,72 @@ class AnswerKeyGenerationTask(LLMTask):
             )
 
         except (json.JSONDecodeError, KeyError, TimeoutError) as e:
-            raise ValueError(f"Failed to parse answer key response: {e}") from e
+            raise JSONParsingError(f"Failed to parse answer key response: {e}") from e
 
     def get_llm_params(self) -> Dict[str, Any]:
         # Cap output length so the model doesn't stream massive responses
         return {"temperature": 0.1, "max_tokens": 1200}
+
+    def should_retry(self, error: Exception, retry_count: int) -> bool:
+        """
+        Determine if task should be retried based on error type.
+
+        Args:
+            error: Exception that occurred
+            retry_count: Total number of retries so far
+
+        Returns:
+            True if should retry, False otherwise
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        if isinstance(error, JSONParsingError):
+            self.json_retry_count += 1
+            should_retry = self.json_retry_count <= self.max_json_retries
+            if should_retry:
+                logger.warning(
+                    f"JSON parsing failed for answer key {self.question.question_id} "
+                    f"(attempt {self.json_retry_count}/{self.max_json_retries}): {error}"
+                )
+            else:
+                logger.error(
+                    f"JSON parsing exhausted for answer key {self.question.question_id} "
+                    f"after {self.max_json_retries} attempts"
+                )
+            return should_retry
+        else:
+            # For other errors, use default behavior
+            return super().should_retry(error, retry_count)
+
+    def _get_json_retry_prompt(self) -> str:
+        """Generate enhanced prompt for JSON parsing retry."""
+        base_prompt = get_answer_key_generation_prompt(
+            question=self.question,
+            general_instructions=self.general_instructions,
+            question_instructions=self.question_instructions
+        )
+
+        json_emphasis = """
+CRITICAL JSON FORMAT REQUIREMENT - PREVIOUS ATTEMPT FAILED:
+Your previous response was not valid JSON. You MUST:
+
+1. Respond with ONLY valid JSON, no markdown formatting or additional text
+2. Use proper JSON syntax with quotes around all strings
+3. Follow this EXACT structure:
+
+{
+  "correct_answer": "string",
+  "solution_steps": ["string", "string"],
+  "alternative_answers": ["string"],
+  "explanation": "string",
+  "grading_notes": "string"
+}
+
+NO MARKDOWN BLOCKS (```), NO EXPLANATORY TEXT, JUST PURE JSON.
+
+"""
+        return json_emphasis + base_prompt
 
     def _extract_json(self, response_text: str) -> str:
         """Extract JSON from response, handling markdown wrapping."""
@@ -169,18 +250,28 @@ class RubricGenerationTask(LLMTask):
         self.answer_key = answer_key
         self.general_instructions = general_instructions
         self.question_instructions = question_instructions
+        self.json_retry_count = 0
+        self.score_retry_count = 0
+        self.max_json_retries = 3
+        self.max_score_retries = 10  # Safety cap for "infinite" retries
 
     @property
     def task_id(self) -> str:
         return f"rubric_{self.question.question_id}"
 
     def build_messages(self) -> List[LLMMessage]:
-        prompt = get_single_rubric_generation_prompt(
-            question=self.question,
-            answer_key=self.answer_key,
-            general_instructions=self.general_instructions,
-            question_instructions=self.question_instructions
-        )
+        # Use enhanced prompt if we're retrying due to score validation errors
+        if self.score_retry_count > 0:
+            prompt = self._get_score_retry_prompt()
+        elif self.json_retry_count > 0:
+            prompt = self._get_json_retry_prompt()
+        else:
+            prompt = get_single_rubric_generation_prompt(
+                question=self.question,
+                answer_key=self.answer_key,
+                general_instructions=self.general_instructions,
+                question_instructions=self.question_instructions
+            )
         return [LLMMessage(role="user", content=prompt)]
 
     def parse_response(self, response_text: str) -> Rubric:
@@ -210,26 +301,143 @@ class RubricGenerationTask(LLMTask):
             return rubric
 
         except (json.JSONDecodeError, KeyError, TimeoutError) as e:
-            raise ValueError(f"Failed to parse rubric response: {e}") from e
+            raise JSONParsingError(f"Failed to parse rubric response: {e}") from e
 
     def _validate_rubric(self, rubric: Rubric):
         """Validate that rubric is well-formed."""
         # Check that criteria points sum to total
         criteria_sum = sum(c.points for c in rubric.criteria)
         if abs(criteria_sum - rubric.total_points) > 0.01:
-            raise ValueError(
-                f"Rubric criteria sum ({criteria_sum}) doesn't match total points ({rubric.total_points})"
+            raise ScoreValidationError(
+                f"Rubric criteria sum ({criteria_sum}) doesn't match total points ({rubric.total_points})",
+                criteria_sum=criteria_sum,
+                expected_total=rubric.total_points
             )
 
         # Check that rubric total matches question points
         if abs(rubric.total_points - self.question.points) > 0.01:
-            raise ValueError(
-                f"Rubric total points ({rubric.total_points}) doesn't match question points ({self.question.points})"
+            raise ScoreValidationError(
+                f"Rubric total points ({rubric.total_points}) doesn't match question points ({self.question.points})",
+                criteria_sum=rubric.total_points,
+                expected_total=self.question.points
             )
 
     def get_llm_params(self) -> Dict[str, Any]:
         # Limit response size to avoid runaway completions
         return {"temperature": 0.1, "max_tokens": 1500}
+
+    def should_retry(self, error: Exception, retry_count: int) -> bool:
+        """
+        Determine if task should be retried based on error type.
+
+        Args:
+            error: Exception that occurred
+            retry_count: Total number of retries so far
+
+        Returns:
+            True if should retry, False otherwise
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        if isinstance(error, JSONParsingError):
+            self.json_retry_count += 1
+            should_retry = self.json_retry_count <= self.max_json_retries
+            if should_retry:
+                logger.warning(
+                    f"JSON parsing failed for rubric {self.question.question_id} "
+                    f"(attempt {self.json_retry_count}/{self.max_json_retries}): {error}"
+                )
+            else:
+                logger.error(
+                    f"JSON parsing exhausted for rubric {self.question.question_id} "
+                    f"after {self.max_json_retries} attempts"
+                )
+            return should_retry
+
+        elif isinstance(error, ScoreValidationError):
+            self.score_retry_count += 1
+            should_retry = self.score_retry_count <= self.max_score_retries
+            if should_retry:
+                logger.warning(
+                    f"Score validation failed for rubric {self.question.question_id} "
+                    f"(attempt {self.score_retry_count}/{self.max_score_retries}): {error}"
+                )
+                if hasattr(error, 'criteria_sum') and hasattr(error, 'expected_total'):
+                    logger.info(
+                        f"Score details - Criteria sum: {error.criteria_sum}, "
+                        f"Expected: {error.expected_total}"
+                    )
+            else:
+                logger.error(
+                    f"Score validation exhausted for rubric {self.question.question_id} "
+                    f"after {self.max_score_retries} attempts"
+                )
+            return should_retry
+
+        else:
+            # For other errors, use default behavior
+            return super().should_retry(error, retry_count)
+
+    def _get_score_retry_prompt(self) -> str:
+        """Generate enhanced prompt for score validation retry."""
+        base_prompt = get_single_rubric_generation_prompt(
+            question=self.question,
+            answer_key=self.answer_key,
+            general_instructions=self.general_instructions,
+            question_instructions=self.question_instructions
+        )
+
+        score_emphasis = f"""
+CRITICAL SCORING REQUIREMENT - PREVIOUS ATTEMPT FAILED:
+Your previous rubric had incorrect point totals. You MUST ensure:
+
+1. The sum of ALL criteria points EXACTLY equals {self.question.points} points
+2. Each criterion must have a specific point value
+3. No partial or fractional points unless they sum exactly to {self.question.points}
+
+SCORING VERIFICATION CHECKLIST:
+- Add up all criteria points: _____ (must equal {self.question.points})
+- Ensure no points are missing or doubled
+- Use simple arithmetic: 2+3+5={self.question.points} ✓ or 1+4+5={self.question.points} ✓
+
+FAILURE TO MATCH EXACT POINT TOTALS WILL RESULT IN ANOTHER RETRY.
+
+"""
+        return score_emphasis + base_prompt
+
+    def _get_json_retry_prompt(self) -> str:
+        """Generate enhanced prompt for JSON parsing retry."""
+        base_prompt = get_single_rubric_generation_prompt(
+            question=self.question,
+            answer_key=self.answer_key,
+            general_instructions=self.general_instructions,
+            question_instructions=self.question_instructions
+        )
+
+        json_emphasis = """
+CRITICAL JSON FORMAT REQUIREMENT - PREVIOUS ATTEMPT FAILED:
+Your previous response was not valid JSON. You MUST:
+
+1. Respond with ONLY valid JSON, no markdown formatting or additional text
+2. Use proper JSON syntax with quotes around all strings
+3. Follow this EXACT structure:
+
+{
+  "total_points": number,
+  "criteria": [
+    {
+      "points": number,
+      "description": "string",
+      "examples": ["string"]
+    }
+  ]
+}
+
+NO MARKDOWN BLOCKS (```), NO EXPLANATORY TEXT, JUST PURE JSON.
+
+"""
+        return json_emphasis + base_prompt
 
     def _extract_json(self, response_text: str) -> str:
         """Extract JSON from response."""
