@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grading Report - Turner, Evan</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding-bottom: 50px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        /* Header Section */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header .meta { font-size: 1.1em; opacity: 0.9; margin-bottom: 20px; }
+        .overall-score {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .score-text {
+            font-size: 2.5em;
+            font-weight: bold;
+        }
+        .grade-letter {
+            font-size: 3em;
+            font-weight: bold;
+            background: #f59e0b;
+            padding: 10px 30px;
+            border-radius: 10px;
+        }
+
+        /* Progress Bar */
+        .progress-bar-container {
+            margin-top: 15px;
+            background: rgba(255,255,255,0.3);
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: #f59e0b;
+            transition: width 0.5s ease;
+        }
+
+        /* Stats Cards */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-card .label {
+            font-size: 0.9em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        .stat-card .value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-card .subtext {
+            font-size: 0.9em;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        /* Question Cards */
+        .question-card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .question-id {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+            background: #f0f0ff;
+            padding: 8px 20px;
+            border-radius: 8px;
+        }
+        .question-score {
+            text-align: right;
+        }
+        .score-earned {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        .score-percentage {
+            font-size: 1.1em;
+            margin-top: 5px;
+        }
+
+        /* Score color classes */
+        .excellent { color: #10b981; }
+        .good { color: #84cc16; }
+        .passing { color: #eab308; }
+        .struggling { color: #f59e0b; }
+        .failing { color: #ef4444; }
+
+        /* Question Content */
+        .question-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .question-panel, .answer-panel {
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .question-panel {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+        }
+        .answer-panel {
+            background: #fffbf0;
+            border-left: 4px solid #f59e0b;
+        }
+        .panel-header {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+        }
+        .points-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        .panel-content {
+            font-size: 1.05em;
+            line-height: 1.8;
+            color: #444;
+            white-space: pre-wrap;
+        }
+        .answer-text {
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        /* Rubric Section */
+        .rubric-section {
+            margin-top: 20px;
+        }
+        .rubric-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .criterion {
+            background: white;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+        .criterion-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .criterion-points {
+            color: #667eea;
+        }
+        .criterion-desc {
+            font-size: 0.95em;
+            color: #555;
+        }
+        .criterion-examples {
+            font-size: 0.9em;
+            color: #777;
+            margin-top: 8px;
+            padding-left: 15px;
+            border-left: 2px solid #e0e0e0;
+        }
+
+        /* Feedback Section */
+        .feedback-section {
+            margin-top: 20px;
+            background: #f0fff4;
+            border-left: 4px solid #10b981;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .feedback-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #10b981;
+            margin-bottom: 10px;
+        }
+        .feedback-content {
+            line-height: 1.8;
+            color: #333;
+        }
+
+        /* Reasoning Section */
+        .reasoning-section {
+            margin-top: 15px;
+            background: #fef3f2;
+            border-left: 4px solid #f59e0b;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .reasoning-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #f59e0b;
+            margin-bottom: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .reasoning-content {
+            line-height: 1.8;
+            color: #333;
+            margin-top: 10px;
+        }
+        .toggle-icon {
+            font-size: 0.8em;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 968px) {
+            .question-content { grid-template-columns: 1fr; }
+            .overall-score { flex-direction: column; gap: 20px; }
+        }
+
+        /* Print Styles */
+        @media print {
+            body { background: white; }
+            .question-card { page-break-inside: avoid; }
+            .header { background: #667eea !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Turner, Evan</h1>
+            <div class="meta">
+                <div>BMI541: Exam 1, Fall 2025</div>
+                <div>Generated: 2025-10-16 01:06:37</div>
+            </div>
+            <div class="overall-score">
+                <div>
+                    <div class="score-text">22.0 / 36.0</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" style="width: 61.1%"></div>
+                    </div>
+                </div>
+                <div class="grade-letter">D</div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="label">Overall Score</div>
+                <div class="value">61.1%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Questions</div>
+                <div class="value">11</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="label">Best Question</div>
+                <div class="value">5</div>
+                <div class="subtext">4.0/4.0 (100%)</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="label">Needs Improvement</div>
+                <div class="value">1a</div>
+                <div class="subtext">0.0/3.0 (0%)</div>
+            </div>
+
+        </div>
+
+        <div class="question-card">
+            <div class="question-header">
+                <div class="question-id">Question 1a</div>
+                <div class="question-score">
+                    <div class="score-earned failing">0.0 / 3.0</div>
+                    <div class="score-percentage failing">0.0%</div>
+                </div>
+            </div>
+
+            <div class="question-content">
+                <!-- Question Panel -->
+                <div class="question-panel">
+                    <div class="panel-header">
+                        <span>Question</span>
+                        <span class="points-badge">3 points</span>
+                    </div>
+                    <div class="panel-content">Resting heart rate (RHR) is a clinical indicator of cardiovascular function measured as the number of heartbeats per minute at rest. Assume that in 20-25 year old women, RHR is normally distributed with mean 72 beats per minute (bpm) and standard deviation 8 bpm. For the questions below, show all of your work.
+(3 pts). If an RHR greater than 90 bpm is regarded as abnormally high, what is the probability that a woman (age 20-25) has an abnormally high resting heart rate?</div>
+
+                    <!-- Rubric -->
+
+                    <div class="rubric-section">
+                        <div class="rubric-title">Grading Rubric</div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly identifies the given parameters (mean, standard deviation) and sets up...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly identifies the given parameters (mean, standard deviation) and sets up the probability statement (e.g., P(X > 90)).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student writes: μ = 72, σ = 8, P(X > 90).<br>
+                                • Student writes: Mean = 72, SD = 8, looking for probability of RHR > 90.<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly calculates the Z-score using the formula Z = (X - μ) / σ.</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly calculates the Z-score using the formula Z = (X - μ) / σ.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student shows: Z = (90 - 72) / 8 = 18 / 8 = 2.25.<br>
+                                • Student shows: Z = 2.25 (even if formula not explicitly written, but calculation is correct).<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly uses the Z-score to find the probability, including applying the compl...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly uses the Z-score to find the probability, including applying the complement rule (1 - P(Z < z)) to get the final answer.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student shows: P(Z < 2.25) = 0.9878, then 1 - 0.9878 = 0.0122.<br>
+                                • Student uses a calculator function (e.g., normalcdf(2.25, E99, 0, 1)) and gets 0.0122.<br>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Answer Panel -->
+                <div class="answer-panel">
+                    <div class="panel-header">
+                        <span>Student Answer</span>
+                    </div>
+                    <div class="answer-text panel-content">BMI541: Exam 1, Fall 2025
+Name: Evan Turner
+Show all of your work.
+1. Resting heart rate (RHR) is a clinical indicator of cardiovascular function measured as the
+number of heartbeats per minute at rest. Assume that in 20-25 year old women, RHR is normally
+distributed with mean 72 beats per minute (bpm) and standard deviation 8 bpm. For the questions
+below, show all of your work.
+N(72, 8)
+a. (3 pts). If an RHR greater than 90 bpm is regarded as abnormally high, what is the probability</div>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div class="feedback-section">
+                <div class="feedback-title">Grading Feedback</div>
+                <div class="feedback-content">The student response only provided the notation N(72, 8) which indicates the mean and standard deviation. However, it did not set up the probability statement, calculate the Z-score, or find the probability. Therefore, no points could be awarded based on the provided rubric.</div>
+            </div>
+
+            <!-- Detailed Reasoning -->
+            <div class="reasoning-section">
+                <div class="reasoning-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <span>Detailed Grading Reasoning</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="reasoning-content" style="display: none;">The student's response 'N(72, 8)' correctly identifies the mean and standard deviation, but it does not fulfill the requirement of setting up the probability statement (e.g., P(X > 90)). Furthermore, there is no calculation of the Z-score or any attempt to find the probability. Each criterion requires a specific action beyond just stating the parameters. As such, no points were earned for any of the criteria.</div>
+            </div>
+
+        </div>
+
+        <div class="question-card">
+            <div class="question-header">
+                <div class="question-id">Question 1b</div>
+                <div class="question-score">
+                    <div class="score-earned struggling">2.0 / 4.0</div>
+                    <div class="score-percentage struggling">50.0%</div>
+                </div>
+            </div>
+
+            <div class="question-content">
+                <!-- Question Panel -->
+                <div class="question-panel">
+                    <div class="panel-header">
+                        <span>Question</span>
+                        <span class="points-badge">4 points</span>
+                    </div>
+                    <div class="panel-content">(4 pts). What is the probability that in a random sample of 6 women (ages 20-25), at least 5 will have an abnormally high RHR?</div>
+
+                    <!-- Rubric -->
+
+                    <div class="rubric-section">
+                        <div class="rubric-title">Grading Rubric</div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly identifies the parameters for the binomial distribution (n and p).</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly identifies the parameters for the binomial distribution (n and p).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student correctly states n=6 and p=0.15 (or 15%).<br>
+                                • Student implicitly uses n=6 and p=0.15 in their calculations without explicitly stating them.<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly calculates the probability of exactly 5 women having an abnormally hig...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly calculates the probability of exactly 5 women having an abnormally high RHR, P(X=5).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student shows calculation for P(X=5) = C(6, 5) * (0.15)^5 * (0.85)^1 and gets the correct numerical value (e.g., 0.000193).<br>
+                                • Student uses a binomial probability calculator or table to find P(X=5) and provides the correct value.<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly calculates the probability of exactly 6 women having an abnormally hig...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly calculates the probability of exactly 6 women having an abnormally high RHR, P(X=6).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student shows calculation for P(X=6) = C(6, 6) * (0.15)^6 * (0.85)^0 and gets the correct numerical value (e.g., 0.000011).<br>
+                                • Student uses a binomial probability calculator or table to find P(X=6) and provides the correct value.<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly sums the probabilities for P(X=5) and P(X=6) to find P(X>=5) and provi...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly sums the probabilities for P(X=5) and P(X=6) to find P(X>=5) and provides the final correct answer.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student adds their calculated P(X=5) and P(X=6) to arrive at the final answer (e.g., 0.000193 + 0.000011 = 0.000204).<br>
+                                • Student correctly identifies that P(X>=5) = P(X=5) + P(X=6) and performs the correct summation, even if there are minor calculation errors in P(X=5) or P(X=6) that propagate.<br>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Answer Panel -->
+                <div class="answer-panel">
+                    <div class="panel-header">
+                        <span>Student Answer</span>
+                    </div>
+                    <div class="answer-text panel-content">that a woman (age 20-25) has an abnormally high resting heart rate?
+P(Z ≥ 90-72 / 8) = P(Z ≥ 2.25) = 1-P(Z ≤ 2.25)
+= 1 - 0.988 = 0.012 = 1.2%
+b. (4 pts). What is the probability that in a random sample of 6 women (ages 20-25), at least 5
+will have an abnormally high RHR?
+Binomial: P(X ≥ 5) = [P(X=5) + P(X=6)] n = 6
+P(X=x) = n! / x!(n-x)! p^x (1-p)^(n-x)
+P(X ≥ 5) = 6! / 5!(6-5)! (0.012)^5 (1-0.012)^(6-5) + 6! / 6!(6-6)! (0.012)^6 (1-0.012)^(6-6)
+= 6(0.012)^5 (0.988) + 1(0.012)^6 (1)
+= 1.47 x 10^-9 = 0.0000000015 %</div>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div class="feedback-section">
+                <div class="feedback-title">Grading Feedback</div>
+                <div class="feedback-content">The student correctly identified the binomial distribution parameters (n=6) and the general approach to calculate P(X>=5) by summing P(X=5) and P(X=6). However, a critical error was made in determining the probability 'p'. The student used p=0.012, which was the result of a previous calculation (likely for a different question or part of the same question, but not the correct 'p' for this specific problem). This incorrect 'p' led to incorrect calculations for P(X=5) and P(X=6), and consequently, an incorrect final answer. If the correct 'p' (which is typically 0.15 for abnormally high RHR in this context, based on common problem setups) had been used, the calculations would have been correct.</div>
+            </div>
+
+            <!-- Detailed Reasoning -->
+            <div class="reasoning-section">
+                <div class="reasoning-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <span>Detailed Grading Reasoning</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="reasoning-content" style="display: none;">1. **Criterion 1 (n and p):** The student correctly identified n=6. However, the value for 'p' was incorrectly taken as 0.012. While 'n' is correct, 'p' is incorrect. According to the rubric, 'Correctly identifies binomial distribution parameters (n, p)'. Since 'p' is incorrect, full points for this criterion cannot be awarded. However, 'n' is correct and the student implicitly used a 'p' value, even if it was the wrong one. Given the structure of the rubric, it's difficult to award partial points for 'p' being wrong but 'n' being right within this single criterion. If 'p' was derived from a previous part of the question and that derivation was correct, then the error might be in applying it to this specific question. Assuming 'p' should be 0.15 (as is common for such problems), the student's 'p' is incorrect. I will award 0.5 points for correctly identifying 'n' and the intent to use a 'p'.
+2. **Criterion 2 (P(X=5)):** The student set up the formula for P(X=5) correctly using the binomial probability mass function: `6! / 5!(6-5)! (0.012)^5 (1-0.012)^(6-5)`. This shows understanding of the formula. The calculation itself is incorrect due to the wrong 'p' value. Therefore, 0.5 points for the correct formula setup.
+3. **Criterion 3 (P(X=6)):** Similarly, the student set up the formula for P(X=6) correctly: `6! / 6!(6-6)! (0.012)^6 (1-0.012)^(6-6)`. The calculation is incorrect due to the wrong 'p' value. Therefore, 0.5 points for the correct formula setup.
+4. **Criterion 4 (P(X>=5)):** The student correctly identified that P(X>=5) = P(X=5) + P(X=6) and attempted to sum their calculated values. This demonstrates understanding of how to combine the probabilities. The final numerical answer is incorrect due to the propagation of the incorrect 'p' value. Therefore, 0.5 points for correctly identifying the summation.</div>
+            </div>
+
+        </div>
+
+        <div class="question-card">
+            <div class="question-header">
+                <div class="question-id">Question 2</div>
+                <div class="question-score">
+                    <div class="score-earned excellent">4.0 / 4.0</div>
+                    <div class="score-percentage excellent">100.0%</div>
+                </div>
+            </div>
+
+            <div class="question-content">
+                <!-- Question Panel -->
+                <div class="question-panel">
+                    <div class="panel-header">
+                        <span>Question</span>
+                        <span class="points-badge">4 points</span>
+                    </div>
+                    <div class="panel-content">One of the first clinical trials for gene therapy conducted in the United States was stopped as one of the children in the trial developed a leukemia-like illness. Fourteen children were enrolled in the trial. In gene therapy trials like this one, if at least one person fell seriously ill, the therapy was considered to have failed, and the trial stopped.
+(4 pts). How successful does a gene therapy need to be on a case-by-case basis (i.e., how high does the probability of a successful gene therapy need to be on a case-by-case basis) to ensure that in a trial of 14 children, there is a 95% probability that all 14 will be free of any illness serious enough to stop the trial? Show your work.</div>
+
+                    <!-- Rubric -->
+
+                    <div class="rubric-section">
+                        <div class="rubric-title">Grading Rubric</div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly identifies the relationship between the individual probability (P) and...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly identifies the relationship between the individual probability (P) and the overall trial success probability, setting up the equation P^14 = 0.95 (or equivalent). This demonstrates understanding that all 14 children must be successful and that probabilities multiply for independent events.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student writes: 'Let P be the probability of success for one child. Then P^14 = 0.95.'<br>
+                                • Student writes: 'The probability of all 14 being free of illness is P * P * ... (14 times) = 0.95.'<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly sets up the mathematical operation to solve for P, demonstrating an un...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly sets up the mathematical operation to solve for P, demonstrating an understanding of how to isolate the variable from the exponential equation. This involves taking the 14th root or raising to the power of 1/14.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student writes: 'P = (0.95)^(1/14)'<br>
+                                • Student writes: 'P = 14th_root(0.95)'<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Performs the correct calculation, showing the intermediate numerical result befo...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Performs the correct calculation, showing the intermediate numerical result before rounding. This indicates proper use of a calculator or mathematical tools.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student shows: 'P = 0.996319...'<br>
+                                • Student shows: 'P = (0.95)^(1/14) = 0.99631937...'<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Provides the correct final numerical answer (0.9963 or 99.63%) with appropriate ...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Provides the correct final numerical answer (0.9963 or 99.63%) with appropriate rounding and/or unit (percentage). The answer should be clearly stated and reflect the calculation.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student writes: 'P ≈ 0.9963'<br>
+                                • Student writes: 'The probability needs to be 99.63%.'<br>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Answer Panel -->
+                <div class="answer-panel">
+                    <div class="panel-header">
+                        <span>Student Answer</span>
+                    </div>
+                    <div class="answer-text panel-content">Binom.al): P(X=x) = n! / (x!(n-x)!) p^x (1-p)^(n-x)
+n=14
+x=14
+P(X=14) = 14! / (14!(0)!) p^14 (1-p)^(14-14)
+
+∴ 0.95 = P^14
+
+P = ¹⁴√0.95 = 0.9963 = 99.63% success rate required</div>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div class="feedback-section">
+                <div class="feedback-title">Grading Feedback</div>
+                <div class="feedback-content">Excellent work! You correctly identified the binomial probability setup, simplified it to the core relationship P^14 = 0.95, and accurately solved for P, providing the correct numerical answer with appropriate rounding and percentage conversion. All steps are clearly shown and correct.</div>
+            </div>
+
+            <!-- Detailed Reasoning -->
+            <div class="reasoning-section">
+                <div class="reasoning-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <span>Detailed Grading Reasoning</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="reasoning-content" style="display: none;">The student successfully met all criteria outlined in the rubric.</div>
+            </div>
+
+        </div>
+
+        <div class="question-card">
+            <div class="question-header">
+                <div class="question-id">Question 3a</div>
+                <div class="question-score">
+                    <div class="score-earned struggling">2.0 / 3.0</div>
+                    <div class="score-percentage struggling">66.7%</div>
+                </div>
+            </div>
+
+            <div class="question-content">
+                <!-- Question Panel -->
+                <div class="question-panel">
+                    <div class="panel-header">
+                        <span>Question</span>
+                        <span class="points-badge">3 points</span>
+                    </div>
+                    <div class="panel-content">Suppose two doctors, Dr. A and Dr. B, test all patients coming into a clinic for allergies. A number of tests are available and so each doctor might order different tests. As a result, each doctor does not necessarily reach the same conclusion. Let the events:
+A+= {doctor A makes a positive diagnosis} and B+= {doctor B makes a positive diagnosis}.
+Suppose that Dr. A makes a positive diagnosis in 10% of all patients, doctor B makes a positive diagnosis in 17% of all patients, and they agree on 8% of the positively diagnosed patients.
+(3 pts). Are the events A+ and B+ independent? Show your work.</div>
+
+                    <!-- Rubric -->
+
+                    <div class="rubric-section">
+                        <div class="rubric-title">Grading Rubric</div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly identifies and states the condition for independence between two event...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly identifies and states the condition for independence between two events (P(A+ \cap B+) = P(A+) * P(B+)).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student explicitly writes: 'For A+ and B+ to be independent, P(A+ \cap B+) must equal P(A+) * P(B+).'<br>
+                                • Student implicitly uses the independence condition by setting up the comparison correctly, even if not explicitly stating the formula.<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly identifies and extracts all given probabilities from the problem state...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly identifies and extracts all given probabilities from the problem statement: P(A+), P(B+), and P(A+ \cap B+).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student writes: 'P(A+) = 0.10, P(B+) = 0.17, P(A+ \cap B+) = 0.08'.<br>
+                                • Student correctly uses these values in subsequent calculations, even if not explicitly listing them first.<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly calculates the product P(A+) * P(B+), compares it to P(A+ \cap B+), an...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly calculates the product P(A+) * P(B+), compares it to P(A+ \cap B+), and draws the correct conclusion regarding independence.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student calculates '0.10 * 0.17 = 0.017'. Then compares '0.08 \neq 0.017' and concludes 'Therefore, A+ and B+ are not independent.'<br>
+                                • Student makes a minor arithmetic error in the product but correctly follows through with the comparison and conclusion based on their calculated product.<br>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Answer Panel -->
+                <div class="answer-panel">
+                    <div class="panel-header">
+                        <span>Student Answer</span>
+                    </div>
+                    <div class="answer-text panel-content">3a. (3 pts). Are the events A+ and B+ independent? Show your work.
+P(A+) = 10% , P(B+) = 17%
+P(A+ ∩ B+) = P(A+) * P(B+) = 1.7% ≠ 8%
+∴ Independent</div>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div class="feedback-section">
+                <div class="feedback-title">Grading Feedback</div>
+                <div class="feedback-content">The student correctly identified the given probabilities and the condition for independence. They also correctly calculated the product P(A+) * P(B+). However, there was a significant error in the final comparison and conclusion. The student incorrectly stated that P(A+ ∩ B+) = P(A+) * P(B+) = 1.7% ≠ 8%, which is a contradiction. The correct comparison should have been P(A+ ∩ B+) = 8% and P(A+) * P(B+) = 1.7%, leading to the conclusion that they are not equal, and thus not independent. The student's final conclusion '∴ Independent' directly contradicts their own calculation and the condition for independence.</div>
+            </div>
+
+            <!-- Detailed Reasoning -->
+            <div class="reasoning-section">
+                <div class="reasoning-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <span>Detailed Grading Reasoning</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="reasoning-content" style="display: none;">1. **Criterion 1 (Condition for independence):** The student implicitly states the condition for independence by writing 'P(A+ ∩ B+) = P(A+) * P(B+)' as the basis for their calculation and comparison. (1.0 point)
+2. **Criterion 2 (Identifies given probabilities):** The student correctly identifies P(A+) = 10% (0.10), P(B+) = 17% (0.17), and P(A+ ∩ B+) = 8% (0.08) by using them in their work. (1.0 point)
+3. **Criterion 3 (Calculates product, compares, and concludes):**
+    - The student correctly calculates P(A+) * P(B+) = 0.10 * 0.17 = 0.017 or 1.7%. (Partial credit for this part)
+    - The student attempts a comparison by writing '1.7% ≠ 8%'. This part is correct in identifying that the values are not equal.
+    - However, the student's overall statement 'P(A+ ∩ B+) = P(A+) * P(B+) = 1.7% ≠ 8%' is logically flawed. It implies that P(A+ ∩ B+) is 1.7%, which is incorrect (it's 8%). More critically, the final conclusion '∴ Independent' is directly opposite to what the inequality '1.7% ≠ 8%' implies for independence. For independence, they *must* be equal. Since they are not equal, the events are *not* independent. This severe error in the conclusion negates the points for drawing the correct conclusion. Therefore, no points are awarded for the conclusion part of this criterion. (0.0 points for comparison and conclusion, despite correct product calculation).</div>
+            </div>
+
+        </div>
+
+        <div class="question-card">
+            <div class="question-header">
+                <div class="question-id">Question 3b</div>
+                <div class="question-score">
+                    <div class="score-earned failing">1.0 / 3.0</div>
+                    <div class="score-percentage failing">33.3%</div>
+                </div>
+            </div>
+
+            <div class="question-content">
+                <!-- Question Panel -->
+                <div class="question-panel">
+                    <div class="panel-header">
+                        <span>Question</span>
+                        <span class="points-badge">3 points</span>
+                    </div>
+                    <div class="panel-content">(3 pts). What is the probability that either doctor (or both) makes a positive diagnosis? Again, show your work.</div>
+
+                    <!-- Rubric -->
+
+                    <div class="rubric-section">
+                        <div class="rubric-title">Grading Rubric</div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly identifies and states the appropriate probability rule (Addition Rule ...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly identifies and states the appropriate probability rule (Addition Rule for probabilities) needed to solve the problem. This includes recognizing that P(A OR B) = P(A) + P(B) - P(A AND B) is the correct formula to use.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student explicitly writes: 'Using the Addition Rule: P(D1 OR D2) = P(D1) + P(D2) - P(D1 AND D2)'.<br>
+                                • Student correctly sets up the problem using the Addition Rule, even if not explicitly naming it, by writing 'P(D1) + P(D2) - P(D1 AND D2)' as the first step towards calculation.<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly substitutes all given numerical values into the identified probability...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly substitutes all given numerical values into the identified probability rule. This demonstrates understanding of which values correspond to which variables in the formula.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student writes: 'P(D1 OR D2) = 0.05 + 0.07 - 0.0025'.<br>
+                                • Student shows the setup 'P(D1) = 0.05, P(D2) = 0.07, P(D1 AND D2) = 0.0025' and then proceeds to '0.05 + 0.07 - 0.0025'.<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Performs the final calculation accurately and provides the correct numerical ans...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Performs the final calculation accurately and provides the correct numerical answer. This includes showing the intermediate steps of the calculation.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student shows: '0.05 + 0.07 - 0.0025 = 0.12 - 0.0025 = 0.0975'.<br>
+                                • Student writes: '0.12 - 0.0025 = 0.0975' as the final step after correct substitution.<br>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Answer Panel -->
+                <div class="answer-panel">
+                    <div class="panel-header">
+                        <span>Student Answer</span>
+                    </div>
+                    <div class="answer-text panel-content">3b. (3 pts). What is the probability that either doctor (or both) makes a positive diagnosis? Again, show your work.
+P(A+ U B+) = P(A+) + P(B+) - P(A+ ∩ B+)
+= 0.1 + 0.17 - 0.017 = 0.253
+= 25.3%</div>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div class="feedback-section">
+                <div class="feedback-title">Grading Feedback</div>
+                <div class="feedback-content">The student correctly identified the Addition Rule for probabilities and set up the formula correctly. However, the numerical values substituted into the formula were incorrect, leading to an incorrect final answer.</div>
+            </div>
+
+            <!-- Detailed Reasoning -->
+            <div class="reasoning-section">
+                <div class="reasoning-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <span>Detailed Grading Reasoning</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="reasoning-content" style="display: none;">The student correctly identified the Addition Rule for probabilities by writing 'P(A+ U B+) = P(A+) + P(B+) - P(A+ ∩ B+)', which earns 1.0 point for the first criterion. For the second criterion, the student substituted incorrect numerical values (0.1, 0.17, 0.017 instead of 0.05, 0.07, 0.0025), so no points are awarded. Consequently, the final calculation is also incorrect, resulting in no points for the third criterion.</div>
+            </div>
+
+        </div>
+
+        <div class="question-card">
+            <div class="question-header">
+                <div class="question-id">Question 4a</div>
+                <div class="question-score">
+                    <div class="score-earned excellent">3.0 / 3.0</div>
+                    <div class="score-percentage excellent">100.0%</div>
+                </div>
+            </div>
+
+            <div class="question-content">
+                <!-- Question Panel -->
+                <div class="question-panel">
+                    <div class="panel-header">
+                        <span>Question</span>
+                        <span class="points-badge">3 points</span>
+                    </div>
+                    <div class="panel-content">A new rapid screening test for early iron-deficiency anemia (IDA) is being evaluated at a community hospital. Investigators recruit 1100 patients with confirmed early IDA and 900 patients confirmed to be free of IDA. All 2000 patients are tested with the new screening test. Of the 1100 truly positive patients, 935 test positive. Of the 900 truly negative patients, 108 test positive. For the questions below, please show your work.
+(3 pts). What is the sensitivity of the new screening test?</div>
+
+                    <!-- Rubric -->
+
+                    <div class="rubric-section">
+                        <div class="rubric-title">Grading Rubric</div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly identifies the definition or formula for sensitivity.</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly identifies the definition or formula for sensitivity.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student states 'Sensitivity = TP / (TP + FN)' or 'Sensitivity = True Positives / (True Positives + False Negatives)'<br>
+                                • Student writes 'Sensitivity = TP / Total truly positive patients'<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly identifies and extracts the necessary values from the problem statemen...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly identifies and extracts the necessary values from the problem statement for the numerator and denominator of the sensitivity calculation (True Positives and total truly positive patients).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student writes 'TP = 935' and 'Total truly positive = 1100' or 'TP + FN = 1100'.<br>
+                                • Student correctly identifies '935' as the number of truly positive patients who tested positive and '1100' as the total number of truly positive patients, even if not explicitly labeled as TP and TP+FN.<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Performs the correct calculation using the identified values and arrives at the ...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Performs the correct calculation using the identified values and arrives at the accurate final answer (0.85 or 85%).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student shows '935 / 1100 = 0.85' or '935 / 1100 = 85%'.<br>
+                                • Student shows '935 / (935 + 165) = 0.85'.<br>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Answer Panel -->
+                <div class="answer-panel">
+                    <div class="panel-header">
+                        <span>Student Answer</span>
+                    </div>
+                    <div class="answer-text panel-content">4a. (3 pts). What is the sensitivity of the new screening test?
+Se = P(Test + | Truly +) = 935/1100
+= 85%</div>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div class="feedback-section">
+                <div class="feedback-title">Grading Feedback</div>
+                <div class="feedback-content">The student correctly identified the formula for sensitivity, extracted the correct values from the problem statement, and performed the calculation accurately to arrive at the correct final answer. The notation 'Se = P(Test + | Truly +)' is a valid and correct representation of sensitivity.</div>
+            </div>
+
+            <!-- Detailed Reasoning -->
+            <div class="reasoning-section">
+                <div class="reasoning-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <span>Detailed Grading Reasoning</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="reasoning-content" style="display: none;">The student's response directly addresses all three criteria for full credit:
+1. **Criterion 1 (Formula/Definition):** The student implicitly defines sensitivity using the conditional probability notation 'Se = P(Test + | Truly +)', which is a correct and sophisticated way to express the definition of sensitivity. This is equivalent to stating the formula TP / (TP + FN) in a probabilistic context. (1.0 point)
+2. **Criterion 2 (Value Extraction):** The student correctly identifies '935' as the True Positives (Test + | Truly +) and '1100' as the total truly positive patients (Truly +), using them directly in the fraction '935/1100'. (1.0 point)
+3. **Criterion 3 (Calculation and Final Answer):** The student performs the correct calculation '935/1100' and arrives at the accurate final answer '85%'. (1.0 point)</div>
+            </div>
+
+        </div>
+
+        <div class="question-card">
+            <div class="question-header">
+                <div class="question-id">Question 4b</div>
+                <div class="question-score">
+                    <div class="score-earned failing">0.0 / 3.0</div>
+                    <div class="score-percentage failing">0.0%</div>
+                </div>
+            </div>
+
+            <div class="question-content">
+                <!-- Question Panel -->
+                <div class="question-panel">
+                    <div class="panel-header">
+                        <span>Question</span>
+                        <span class="points-badge">3 points</span>
+                    </div>
+                    <div class="panel-content">(3 pts). What is the specificity of the new test?</div>
+
+                    <!-- Rubric -->
+
+                    <div class="rubric-section">
+                        <div class="rubric-title">Grading Rubric</div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly identifies or states the formula for specificity (Specificity = TN / (...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly identifies or states the formula for specificity (Specificity = TN / (TN + FP) or Specificity = True Negatives / (True Negatives + False Positives)).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Specificity = TN / (TN + FP)<br>
+                                • Specificity = True Negatives / (True Negatives + False Positives)<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly identifies or derives the values for True Negatives (TN) and False Pos...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly identifies or derives the values for True Negatives (TN) and False Positives (FP) from the problem context (e.g., TN=190, FP=10).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • TN = 190, FP = 10<br>
+                                • True Negatives = 190, False Positives = 10<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly substitutes the identified values into the specificity formula and per...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly substitutes the identified values into the specificity formula and performs the calculation to arrive at the correct final answer (0.95 or 95%).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • 190 / (190 + 10) = 190 / 200 = 0.95<br>
+                                • 190 / 200 = 0.95 or 95%<br>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Answer Panel -->
+                <div class="answer-panel">
+                    <div class="panel-header">
+                        <span>Student Answer</span>
+                    </div>
+                    <div class="answer-text panel-content">4b. (3 pts). What is the specificity of the new test?
+Sp = P(Test - | Truly -) = 792/900 = 88%</div>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div class="feedback-section">
+                <div class="feedback-title">Grading Feedback</div>
+                <div class="feedback-content">The student provided a calculation for specificity, but the values used (792/900) are incorrect for the given problem context (which expects 190/200). While the student correctly identified the concept of specificity as P(Test - | Truly -), the numerical application is wrong, leading to an incorrect final answer of 88% instead of 95%. Without the correct values for True Negatives and False Positives, no points can be awarded for the calculation or the final answer.</div>
+            </div>
+
+            <!-- Detailed Reasoning -->
+            <div class="reasoning-section">
+                <div class="reasoning-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <span>Detailed Grading Reasoning</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="reasoning-content" style="display: none;">1. **Criterion 1 (Formula):** The student implicitly states the formula as 'Sp = P(Test - | Truly -)', which is a correct conceptual definition of specificity. However, the rubric specifically looks for 'Specificity = TN / (TN + FP)' or 'Specificity = True Negatives / (True Negatives + False Positives)' or implied by correct substitution. While 'P(Test - | Truly -)' is conceptually correct, it doesn't directly match the expected formula structure for point allocation without correct numerical application. Given the incorrect numbers, this conceptual statement alone does not earn points under the strict interpretation of the rubric's examples for this criterion.
+2. **Criterion 2 (Identify TN and FP):** The student uses 792 and 900 in their calculation. These values do not correspond to the expected True Negatives (190) and Total Actual Negatives (200) from the problem's context. Therefore, no points are awarded for correctly identifying TN and FP.
+3. **Criterion 3 (Substitution and Calculation):** The student substitutes incorrect values (792 and 900) into their calculation and arrives at an incorrect final answer (88%). Since the values are incorrect, no points are awarded for this criterion.</div>
+            </div>
+
+        </div>
+
+        <div class="question-card">
+            <div class="question-header">
+                <div class="question-id">Question 4c</div>
+                <div class="question-score">
+                    <div class="score-earned excellent">4.0 / 4.0</div>
+                    <div class="score-percentage excellent">100.0%</div>
+                </div>
+            </div>
+
+            <div class="question-content">
+                <!-- Question Panel -->
+                <div class="question-panel">
+                    <div class="panel-header">
+                        <span>Question</span>
+                        <span class="points-badge">4 points</span>
+                    </div>
+                    <div class="panel-content">(4 pts). Use Bayes rule to write the negative predictive value of the new test as a function of sensitivity, specificity, and prevalence.</div>
+
+                    <!-- Rubric -->
+
+                    <div class="rubric-section">
+                        <div class="rubric-title">Grading Rubric</div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly sets up the initial Bayes' Theorem expression for NPV (P(D-|T-)) and c...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly sets up the initial Bayes' Theorem expression for NPV (P(D-|T-)) and correctly identifies P(T-|D-) as Specificity and P(D-) as (1 - Prevalence) in the numerator.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student writes: NPV = P(D-|T-) = [P(T-|D-) * P(D-)] / P(T-)<br>
+                                • Student writes: NPV = [Specificity * (1 - Prevalence)] / P(T-)<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly applies the Law of Total Probability to expand the denominator P(T-).</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly applies the Law of Total Probability to expand the denominator P(T-).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student writes: P(T-) = P(T-|D+) * P(D+) + P(T-|D-) * P(D-)<br>
+                                • Student correctly identifies that the denominator needs to account for both true negatives and false negatives.<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly substitutes P(T-|D+) as (1 - Sensitivity) and P(D+) as Prevalence into...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly substitutes P(T-|D+) as (1 - Sensitivity) and P(D+) as Prevalence into the expanded denominator.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student writes: P(T-) = (1 - Sensitivity) * Prevalence + P(T-|D-) * P(D-)<br>
+                                • Student writes: P(T-) = (1 - Sensitivity) * Prevalence + Specificity * (1 - Prevalence)<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Provides the complete and correct final formula for NPV, combining all derived t...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Provides the complete and correct final formula for NPV, combining all derived terms.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student writes: NPV = (Specificity * (1 - Prevalence)) / ((1 - Sensitivity) * Prevalence + Specificity * (1 - Prevalence))<br>
+                                • Student writes: NPV = (Specificity * (1 - Prevalence)) / ((Specificity * (1 - Prevalence)) + ( (1 - Sensitivity) * Prevalence))<br>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Answer Panel -->
+                <div class="answer-panel">
+                    <div class="panel-header">
+                        <span>Student Answer</span>
+                    </div>
+                    <div class="answer-text panel-content">4c. (4 pts). Use Bayes rule to write the negative predictive value of the new test as a function of
+sensitivity, specificity, and prevalence.
+NPV = P(Truly - | Test -) =
+P(Test - | True -) P(True -)
+P(Test - | True -) P(True -) + P(Test - | True +) P(True +)
+P(Test - | True -) = Sp
+P(True -) = 1-Pr
+P(True +) = Pr
+= Sp(1-Pr) / [Sp(1-Pr) + (1-Se)(Pr)]
+P(Test - | True +) = 1-Se,</div>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div class="feedback-section">
+                <div class="feedback-title">Grading Feedback</div>
+                <div class="feedback-content">The student has correctly derived the formula for Negative Predictive Value (NPV) using Bayes' rule, expressing it as a function of sensitivity, specificity, and prevalence. All steps are clearly laid out and accurately substituted.</div>
+            </div>
+
+            <!-- Detailed Reasoning -->
+            <div class="reasoning-section">
+                <div class="reasoning-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <span>Detailed Grading Reasoning</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="reasoning-content" style="display: none;">The student's response directly follows the solution steps and matches the correct answer. 
+1. The initial Bayes' Theorem expression for NPV is correctly set up, and P(T-|D-) is identified as Specificity and P(D-) as (1 - Prevalence) in the numerator. (1.0 point)
+2. The Law of Total Probability is correctly applied to expand the denominator P(T-). (1.0 point)
+3. P(T-|D+) is correctly substituted as (1 - Sensitivity) and P(D+) as Prevalence into the expanded denominator. (1.0 point)
+4. The final formula is complete and correct, combining all derived terms. (1.0 point)</div>
+            </div>
+
+        </div>
+
+        <div class="question-card">
+            <div class="question-header">
+                <div class="question-id">Question 4d</div>
+                <div class="question-score">
+                    <div class="score-earned failing">0.0 / 2.0</div>
+                    <div class="score-percentage failing">0.0%</div>
+                </div>
+            </div>
+
+            <div class="question-content">
+                <!-- Question Panel -->
+                <div class="question-panel">
+                    <div class="panel-header">
+                        <span>Question</span>
+                        <span class="points-badge">2 points</span>
+                    </div>
+                    <div class="panel-content">(2 pts). If the prevalence of IDA in the general population is 0.05, what is the negative predictive value of the new test?</div>
+
+                    <!-- Rubric -->
+
+                    <div class="rubric-section">
+                        <div class="rubric-title">Grading Rubric</div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly states the formula for Negative Predictive Value (NPV).</span>
+                                <span class="criterion-points">0.5 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly states the formula for Negative Predictive Value (NPV).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student writes: 'NPV = TN / (TN + FN)'<br>
+                                • Student writes: 'NPV = True Negatives / (True Negatives + False Negatives)'<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly calculates the number of individuals with and without IDA (diseased an...</span>
+                                <span class="criterion-points">0.5 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly calculates the number of individuals with and without IDA (diseased and healthy populations) based on the given prevalence, or sets up a correct 2x2 table structure with these initial values.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student assumes a population of 10,000 and calculates: 'Diseased = 500, Healthy = 9,500'<br>
+                                • Student correctly sets up the first row of a 2x2 table with '500' and '9,500' as the totals for 'Disease Present' and 'Disease Absent' respectively (or equivalent using proportions).<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly calculates the values for True Negatives (TN) and False Negatives (FN)...</span>
+                                <span class="criterion-points">0.5 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly calculates the values for True Negatives (TN) and False Negatives (FN) using the provided sensitivity, specificity, and the population breakdown (diseased/healthy).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student calculates: 'TN = 0.95 * 9,500 = 9,025' and 'FN = (1 - 0.90) * 500 = 50'<br>
+                                • Student correctly identifies TN and FN values within a completed 2x2 contingency table, even if other values are incorrect.<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly substitutes the calculated TN and FN values into the NPV formula and p...</span>
+                                <span class="criterion-points">0.5 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly substitutes the calculated TN and FN values into the NPV formula and performs the final calculation, providing the correct numerical answer (0.9945 or equivalent rounding).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student writes: 'NPV = 9,025 / (9,025 + 50) = 9,025 / 9,075 = 0.99448... ≈ 0.9945'<br>
+                                • Student provides the final answer '0.9945' with supporting calculations that correctly lead to this value, even if intermediate steps are not explicitly written out but are implied by the correct final calculation.<br>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Answer Panel -->
+                <div class="answer-panel">
+                    <div class="panel-header">
+                        <span>Student Answer</span>
+                    </div>
+                    <div class="answer-text panel-content">4d. (2 pts). If the prevalence of IDA in the general population is 0.05, what is the negative
+predictive value of the new test?
+NPV = 0.88(1-0.05) / [0.88(1-0.05) + (1-0.85)(0.05)]
+= 0.836 / [0.836 + 0.0075]
+= 0.836 / 0.8435
+= 99.1%</div>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div class="feedback-section">
+                <div class="feedback-title">Grading Feedback</div>
+                <div class="feedback-content">The student's response contains significant errors in the formula used for Negative Predictive Value (NPV) and the values substituted. The sensitivity and specificity values used in the calculation (0.88 and 0.85) do not match the provided values (0.90 and 0.95). As a result, none of the steps align with the correct methodology or lead to the correct answer.</div>
+            </div>
+
+            <!-- Detailed Reasoning -->
+            <div class="reasoning-section">
+                <div class="reasoning-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <span>Detailed Grading Reasoning</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="reasoning-content" style="display: none;">The student did not correctly state the NPV formula in terms of sensitivity, specificity, and prevalence, nor did they use the correct sensitivity and specificity values. The calculation performed is incorrect and does not lead to the correct NPV. Therefore, no points can be awarded for any of the criteria.</div>
+            </div>
+
+        </div>
+
+        <div class="question-card">
+            <div class="question-header">
+                <div class="question-id">Question 4e</div>
+                <div class="question-score">
+                    <div class="score-earned struggling">2.0 / 3.0</div>
+                    <div class="score-percentage struggling">66.7%</div>
+                </div>
+            </div>
+
+            <div class="question-content">
+                <!-- Question Panel -->
+                <div class="question-panel">
+                    <div class="panel-header">
+                        <span>Question</span>
+                        <span class="points-badge">3 points</span>
+                    </div>
+                    <div class="panel-content">(3 pts). Assume the specificity and prevalence remain unchanged. If the sensitivity of the new test increases, what happens to the negative predictive value. Justify your answer.</div>
+
+                    <!-- Rubric -->
+
+                    <div class="rubric-section">
+                        <div class="rubric-title">Grading Rubric</div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly states the direction of change for Negative Predictive Value (NPV).</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly states the direction of change for Negative Predictive Value (NPV).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student states: 'The Negative Predictive Value (NPV) will increase.'<br>
+                                • Student states: 'NPV goes up.'<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Provides a clear and accurate justification for the change in NPV, referencing t...</span>
+                                <span class="criterion-points">2.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Provides a clear and accurate justification for the change in NPV, referencing the relationship between sensitivity and NPV, potentially using the formula or logical deduction.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student states: 'The NPV will increase. As sensitivity increases, (1 - Sensitivity) decreases. Since (1 - Sensitivity) is in the denominator and multiplied by prevalence, a decrease in this term makes the denominator smaller. With a constant numerator, a smaller denominator leads to a larger overall NPV.'<br>
+                                • Student states: 'NPV increases. Higher sensitivity means fewer false negatives. With fewer false negatives, among those who test negative, a higher proportion will truly not have the condition, thus increasing NPV.'<br>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Answer Panel -->
+                <div class="answer-panel">
+                    <div class="panel-header">
+                        <span>Student Answer</span>
+                    </div>
+                    <div class="answer-text panel-content">4e. (3 pts). Assume the specificity and prevalence remain unchanged. If the sensitivity of the new
+test increases, what happens to the negative predictive value. Justify your answer.
+If Sp, Pr remain constant, Se ↑ Then NPV increases.
+Numerator remains the same while the denominator decreases,
+therefore, NPV increases.</div>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div class="feedback-section">
+                <div class="feedback-title">Grading Feedback</div>
+                <div class="feedback-content">The student correctly identified that the Negative Predictive Value (NPV) will increase. They also provided a partial justification by stating that the numerator remains the same while the denominator decreases, leading to an increase in NPV. However, the justification is incomplete as it does not explicitly explain *why* the denominator decreases in relation to the increase in sensitivity. To earn full points, the student needed to connect the increase in sensitivity to the decrease in the (1 - Sensitivity) term in the denominator.</div>
+            </div>
+
+            <!-- Detailed Reasoning -->
+            <div class="reasoning-section">
+                <div class="reasoning-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <span>Detailed Grading Reasoning</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="reasoning-content" style="display: none;">The student's response was evaluated against the two criteria in the rubric:
+
+1.  **Criterion 1 (1.0 points): Correctly states the direction of change for Negative Predictive Value (NPV).** The student clearly states 'NPV increases.' This directly matches the rubric's requirement. Therefore, 1.0 point is awarded.
+
+2.  **Criterion 2 (2.0 points): Provides a clear and accurate justification for the change in NPV, referencing the relationship between sensitivity and NPV, potentially using the formula or logical deduction.** The student states, 'Numerator remains the same while the denominator decreases, therefore, NPV increases.' This is a correct general statement about fractions. However, it lacks the crucial link to *why* the denominator decreases when sensitivity increases. The justification does not explicitly mention the (1 - Sensitivity) term or how its decrease impacts the denominator. While the statement about the denominator decreasing is correct in the context of the formula, the student did not provide the underlying reasoning for *that* decrease based on sensitivity. Therefore, only partial credit is awarded for this criterion. Given the lack of explicit connection to sensitivity's role in decreasing the denominator, 1.0 point is awarded for this criterion, acknowledging the correct general mechanism but missing the specific link to sensitivity.</div>
+            </div>
+
+        </div>
+
+        <div class="question-card">
+            <div class="question-header">
+                <div class="question-id">Question 5</div>
+                <div class="question-score">
+                    <div class="score-earned excellent">4.0 / 4.0</div>
+                    <div class="score-percentage excellent">100.0%</div>
+                </div>
+            </div>
+
+            <div class="question-content">
+                <!-- Question Panel -->
+                <div class="question-panel">
+                    <div class="panel-header">
+                        <span>Question</span>
+                        <span class="points-badge">4 points</span>
+                    </div>
+                    <div class="panel-content">(4 pts). The emergency department (ED) here at UW is designed to meet the critical medical needs of 70,000 adult and pediatric patients each year. If 48 is the average number of patients with cardiac-related events seen at the UW ED every day, calculate the probability of seeing at least 2 cardiac-related patients in 1 hour. You can assume that these patients are showing up randomly throughout the day. Show your work.</div>
+
+                    <!-- Rubric -->
+
+                    <div class="rubric-section">
+                        <div class="rubric-title">Grading Rubric</div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly calculates the average rate (λ) for the specified time unit (1 hour).</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly calculates the average rate (λ) for the specified time unit (1 hour).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student correctly calculates λ = 48 patients/day / 24 hours/day = 2 patients/hour.<br>
+                                • Student shows 48/24 = 2, clearly indicating the rate per hour.<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly identifies the appropriate probability distribution (Poisson) and sets...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly identifies the appropriate probability distribution (Poisson) and sets up the problem using the complement rule.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student states 'This is a Poisson distribution problem' and writes P(X ≥ 2) = 1 - [P(X=0) + P(X=1)].<br>
+                                • Student implicitly uses the Poisson formula and correctly sets up the complement, even if not explicitly naming the distribution.<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Correctly calculates P(X=0) and P(X=1) using the Poisson probability mass functi...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Correctly calculates P(X=0) and P(X=1) using the Poisson probability mass function with the derived λ.</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student shows P(X=0) = (2^0 * e^(-2)) / 0! = e^(-2) and P(X=1) = (2^1 * e^(-2)) / 1! = 2e^(-2).<br>
+                                • Student calculates e^(-2) ≈ 0.1353 and 2e^(-2) ≈ 0.2707, showing the intermediate steps.<br>
+
+                            </div>
+
+                        </div>
+
+                        <div class="criterion">
+                            <div class="criterion-header">
+                                <span>Performs the final calculation accurately and provides the correct final probabi...</span>
+                                <span class="criterion-points">1.0 pts</span>
+                            </div>
+                            <div class="criterion-desc">Performs the final calculation accurately and provides the correct final probability, rounded to an appropriate number of decimal places (e.g., four).</div>
+
+                            <div class="criterion-examples">
+                                <strong>Examples:</strong><br>
+                                • Student calculates P(X < 2) = 0.135335 + 0.27067 = 0.406005 and then P(X ≥ 2) = 1 - 0.406005 = 0.593995, rounding to 0.5940.<br>
+                                • Student provides the final answer as 0.5940 with clear calculation steps leading to it.<br>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Answer Panel -->
+                <div class="answer-panel">
+                    <div class="panel-header">
+                        <span>Student Answer</span>
+                    </div>
+                    <div class="answer-text panel-content">5. (4 pts). The emergency department (ED) here at UW is designed to meet the critical medical
+needs of 70,000 adult and pediatric patients each year. If 48 is the average number of patients
+with cardiac-related events seen at the UW ED every day, calculate the probability of seeing at
+least 2 cardiac-related patients in 1 hour. You can assume that these patients are showing up
+randomly throughout the day. Show your work.
+
+P(X=x) = μ^x e^-μ
+           x!
+
+Patients show up randomly => can assume
+Poisson.
+
+In one hour: Expect to see 48/24 = 2 cardiac patients => μ=2
+
+P(X≥2) = 1 - [P(X=0) + P(X=1)]
+
+P(X≥2) = 1 - (2^0 e^-2 / 1) - (2^1 e^-2 / 1) = 1 - 0.135 - 0.271 = 0.594
+
+∴ P(X≥2) = 59.4%</div>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div class="feedback-section">
+                <div class="feedback-title">Grading Feedback</div>
+                <div class="feedback-content">The student provided a complete and accurate solution. They correctly identified the Poisson distribution, calculated the average rate per hour (λ), set up the problem using the complement rule, calculated P(X=0) and P(X=1) correctly, and performed the final calculation to arrive at the correct probability, rounded appropriately.</div>
+            </div>
+
+            <!-- Detailed Reasoning -->
+            <div class="reasoning-section">
+                <div class="reasoning-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                    <span>Detailed Grading Reasoning</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="reasoning-content" style="display: none;">The student successfully met all criteria outlined in the rubric:
+
+1.  **Correctly calculates the average rate (λ):** The student explicitly calculated '48/24 = 2 cardiac patients => μ=2', which is correct for λ.
+2.  **Correctly identifies the appropriate probability distribution and sets up the problem using the complement rule:** The student stated 'Patients show up randomly => can assume Poisson.' and correctly set up 'P(X≥2) = 1 - [P(X=0) + P(X=1)]'.
+3.  **Correctly calculates P(X=0) and P(X=1):** The student showed the formulas '2^0 e^-2 / 1' and '2^1 e^-2 / 1' and then provided the correct numerical values '0.135' and '0.271' (which are correctly rounded intermediate values for e^-2 and 2e^-2).
+4.  **Performs the final calculation accurately and provides the correct final probability:** The student correctly calculated '1 - 0.135 - 0.271 = 0.594', which is the correct final answer rounded to three decimal places (or four, if the last digit is zero, as per the answer key's 0.5940). The percentage conversion is also correct.</div>
+            </div>
+
+        </div>
+
+    </div>
+</body>
+</html>

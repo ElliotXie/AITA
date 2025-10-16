@@ -374,8 +374,8 @@ class GradingPipeline:
                 errors=errors
             )
 
-            # Save individual student results
-            self._save_student_results(result)
+            # Save individual student results (HTML generation enabled by default)
+            self._save_student_results(result, generate_html=True)
 
             return result
 
@@ -476,10 +476,37 @@ class GradingPipeline:
 
         logger.info(f"Batch grading completed: {successful_students}/{len(student_dirs)} students")
 
+        # Generate index page for easy navigation
+        try:
+            from aita.report.grading_report import generate_index_page
+
+            # Collect student summaries
+            student_summaries = []
+            for result in student_results:
+                if result.percentage > 0:  # Only include successfully graded students
+                    student_summaries.append({
+                        'student_name': result.student_name,
+                        'total_score': result.total_score,
+                        'total_possible': result.total_possible,
+                        'percentage': result.percentage,
+                        'grade_letter': result.grade_letter,
+                        'report_link': f"students/{result.student_name}/grading_report.html"
+                    })
+
+            if student_summaries:
+                index_path = generate_index_page(
+                    grading_results_dir=self.grading_dir,
+                    exam_name=self.exam_spec.exam_name if self.exam_spec else "Exam Grading",
+                    student_summaries=student_summaries
+                )
+                logger.info(f"Generated grading index page at {index_path}")
+        except Exception as e:
+            logger.warning(f"Failed to generate index page: {e}")
+
         return batch_result
 
-    def _save_student_results(self, result: StudentGradingResult) -> None:
-        """Save individual student grading results."""
+    def _save_student_results(self, result: StudentGradingResult, generate_html: bool = True) -> None:
+        """Save individual student grading results and optionally generate HTML report."""
         student_dir = self.grading_dir / "students" / result.student_name
         student_dir.mkdir(parents=True, exist_ok=True)
 
@@ -512,6 +539,37 @@ class GradingPipeline:
         summary_file = student_dir / "grade_summary.json"
         with open(summary_file, 'w') as f:
             json.dump(summary_data, f, indent=2, ensure_ascii=False)
+
+        # Generate HTML report if requested
+        if generate_html:
+            try:
+                from aita.report.grading_report import GradingReportGenerator
+
+                # Load student transcriptions for answers
+                transcription_file = self.transcription_dir / result.student_name / "question_transcriptions.json"
+                student_answers = {}
+                if transcription_file.exists():
+                    with open(transcription_file, 'r', encoding='utf-8') as f:
+                        trans_data = json.load(f)
+                        student_answers = {
+                            qa["question_id"]: qa["raw_text"]
+                            for qa in trans_data.get("question_answers", [])
+                        }
+
+                # Generate HTML report
+                generator = GradingReportGenerator(self.exam_spec)
+                html_file = student_dir / "grading_report.html"
+                generator.generate_student_report(
+                    student_name=result.student_name,
+                    grading_data=result.to_dict(),
+                    rubrics=self.rubrics,
+                    student_answers=student_answers,
+                    output_file=html_file
+                )
+                logger.info(f"Generated HTML grading report for {result.student_name}")
+
+            except Exception as e:
+                logger.warning(f"Failed to generate HTML report for {result.student_name}: {e}")
 
     def _save_batch_results(self, result: BatchGradingResult) -> None:
         """Save batch grading results and statistics."""
