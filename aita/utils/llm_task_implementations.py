@@ -857,3 +857,272 @@ def create_grading_tasks(
             tasks.append(task)
 
     return tasks
+
+
+class RubricAdjustmentTask(LLMTask):
+    """
+    Task for applying natural language adjustments to existing rubrics.
+
+    Parses user adjustment instructions and applies them to rubrics while
+    maintaining structural integrity and point accuracy.
+    """
+
+    def __init__(
+        self,
+        rubric: Rubric,
+        adjustment,
+        answer_key: Optional[AnswerKey] = None
+    ):
+        """
+        Initialize rubric adjustment task.
+
+        Args:
+            rubric: Original rubric to adjust
+            adjustment: RubricAdjustment object with instructions
+            answer_key: Optional answer key for context
+        """
+        from aita.utils.rubric_adjustment import RubricAdjustment
+
+        self.rubric = rubric
+        self.adjustment = adjustment
+        self.answer_key = answer_key
+        self.json_retry_count = 0
+        self.validation_retry_count = 0
+        self.max_json_retries = 3
+        self.max_validation_retries = 5  # Allow retries for point validation
+
+    @property
+    def task_id(self) -> str:
+        return f"adjust_rubric_{self.rubric.question_id}"
+
+    def build_messages(self) -> List[LLMMessage]:
+        # Use enhanced prompt if we're retrying due to validation errors
+        if self.validation_retry_count > 0:
+            prompt = self._get_validation_retry_prompt()
+        elif self.json_retry_count > 0:
+            prompt = self._get_json_retry_prompt()
+        else:
+            from aita.utils.prompts import get_rubric_adjustment_application_prompt
+            prompt = get_rubric_adjustment_application_prompt(
+                current_rubric=self.rubric.to_dict(),
+                adjustment=self.adjustment,
+                answer_key=self.answer_key
+            )
+        return [LLMMessage(role="user", content=prompt)]
+
+    def parse_response(self, response_text: str) -> Rubric:
+        """Parse JSON response into adjusted Rubric object."""
+        try:
+            # Extract JSON from response using safe method
+            json_text = safe_extract_json(response_text)
+            data = json.loads(json_text)
+
+            criteria = []
+            for criterion_data in data.get('criteria', []):
+                criteria.append(RubricCriterion(
+                    points=criterion_data['points'],
+                    description=criterion_data['description'],
+                    examples=criterion_data.get('examples', [])
+                ))
+
+            adjusted_rubric = Rubric(
+                question_id=self.rubric.question_id,
+                total_points=data.get('total_points', self.rubric.total_points),
+                criteria=criteria
+            )
+
+            # Validate adjusted rubric
+            self._validate_adjusted_rubric(adjusted_rubric)
+
+            return adjusted_rubric
+
+        except (json.JSONDecodeError, KeyError, TimeoutError) as e:
+            raise JSONParsingError(f"Failed to parse rubric adjustment response: {e}") from e
+        except ValueError as e:
+            raise JSONParsingError(f"Rubric validation failed: {e}") from e
+
+    def get_llm_params(self) -> Dict[str, Any]:
+        return {"temperature": 0.1, "max_tokens": 1500}
+
+    def should_retry(self, error: Exception, retry_count: int) -> bool:
+        """
+        Determine if task should be retried based on error type.
+
+        Args:
+            error: Exception that occurred
+            retry_count: Total number of retries so far
+
+        Returns:
+            True if should retry, False otherwise
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        if isinstance(error, JSONParsingError):
+            error_msg = str(error).lower()
+
+            # Check for validation errors (point mismatches)
+            if "validation failed" in error_msg or "points" in error_msg:
+                self.validation_retry_count += 1
+                should_retry = self.validation_retry_count <= self.max_validation_retries
+                if should_retry:
+                    logger.warning(
+                        f"Rubric validation failed for {self.rubric.question_id} "
+                        f"(attempt {self.validation_retry_count}/{self.max_validation_retries}): {error}"
+                    )
+                else:
+                    logger.error(
+                        f"Rubric validation exhausted for {self.rubric.question_id} "
+                        f"after {self.max_validation_retries} attempts"
+                    )
+                return should_retry
+            else:
+                # JSON parsing error
+                self.json_retry_count += 1
+                should_retry = self.json_retry_count <= self.max_json_retries
+                if should_retry:
+                    logger.warning(
+                        f"JSON parsing failed for adjustment {self.rubric.question_id} "
+                        f"(attempt {self.json_retry_count}/{self.max_json_retries}): {error}"
+                    )
+                else:
+                    logger.error(
+                        f"JSON parsing exhausted for adjustment {self.rubric.question_id} "
+                        f"after {self.max_json_retries} attempts"
+                    )
+                return should_retry
+        else:
+            # For other errors, use default behavior
+            return super().should_retry(error, retry_count)
+
+    def _validate_adjusted_rubric(self, adjusted_rubric: Rubric) -> None:
+        """
+        Validate that an adjusted rubric maintains structural integrity.
+
+        Args:
+            adjusted_rubric: The adjusted rubric to validate
+
+        Raises:
+            ValueError: If validation fails
+        """
+        # Check that criteria points sum to total
+        criteria_sum = sum(c.points for c in adjusted_rubric.criteria)
+        if abs(criteria_sum - adjusted_rubric.total_points) > 0.01:
+            raise ValueError(
+                f"Criteria points ({criteria_sum}) do not sum to total points ({adjusted_rubric.total_points})"
+            )
+
+        # Check that all criteria have positive points
+        for criterion in adjusted_rubric.criteria:
+            if criterion.points <= 0:
+                raise ValueError(f"Criterion has non-positive points: {criterion.points}")
+
+        # Check that rubric has at least one criterion
+        if not adjusted_rubric.criteria:
+            raise ValueError("Adjusted rubric has no criteria")
+
+    def _get_validation_retry_prompt(self) -> str:
+        """Generate enhanced prompt for validation retry."""
+        from aita.utils.prompts import get_rubric_adjustment_application_prompt
+
+        base_prompt = get_rubric_adjustment_application_prompt(
+            current_rubric=self.rubric.to_dict(),
+            adjustment=self.adjustment,
+            answer_key=self.answer_key
+        )
+
+        validation_emphasis = f"""
+CRITICAL POINT VALIDATION FAILURE - PREVIOUS ATTEMPT FAILED:
+Your previous rubric had points that did NOT sum correctly. You MUST:
+
+1. Add up ALL criteria points to ensure they equal {self.rubric.total_points}
+2. Check your arithmetic carefully: criterion1_points + criterion2_points + ... = {self.rubric.total_points}
+3. Use EXACT point values (no rounding errors)
+4. Ensure every criterion has positive points
+
+EXAMPLE VALIDATION:
+- Criterion 1: 3 points
+- Criterion 2: 4 points
+- Criterion 3: 3 points
+- TOTAL: 3 + 4 + 3 = 10 points ✓ (must equal {self.rubric.total_points})
+
+FAILURE TO MATCH EXACT POINT TOTALS WILL RESULT IN ANOTHER RETRY.
+
+"""
+        return validation_emphasis + base_prompt
+
+    def _get_json_retry_prompt(self) -> str:
+        """Generate enhanced prompt for JSON parsing retry."""
+        from aita.utils.prompts import get_rubric_adjustment_application_prompt
+
+        base_prompt = get_rubric_adjustment_application_prompt(
+            current_rubric=self.rubric.to_dict(),
+            adjustment=self.adjustment,
+            answer_key=self.answer_key
+        )
+
+        json_emphasis = """
+CRITICAL JSON FORMAT REQUIREMENT - PREVIOUS ATTEMPT FAILED:
+Your previous response was not valid JSON. You MUST:
+
+1. Respond with ONLY valid JSON, no markdown formatting or additional text
+2. Use proper JSON syntax with quotes around all strings
+3. Follow this EXACT structure:
+
+{
+  "question_id": "string",
+  "total_points": number,
+  "criteria": [
+    {
+      "points": number,
+      "description": "string",
+      "examples": ["string"]
+    }
+  ]
+}
+
+NO MARKDOWN BLOCKS (```), NO EXPLANATORY TEXT, JUST PURE JSON.
+
+"""
+        return json_emphasis + base_prompt
+
+    def get_checkpoint_data(self) -> Dict[str, Any]:
+        return {
+            "task_id": self.task_id,
+            "task_type": "RubricAdjustment",
+            "question_id": self.rubric.question_id,
+            "adjustment_type": self.adjustment.adjustment_type
+        }
+
+
+def create_rubric_adjustment_tasks(
+    rubrics: List[Rubric],
+    adjustments: List,
+    answer_keys: Optional[Dict[str, AnswerKey]] = None
+) -> List[RubricAdjustmentTask]:
+    """
+    Create rubric adjustment tasks from adjustments.
+
+    Args:
+        rubrics: List of existing rubrics
+        adjustments: List of RubricAdjustment objects
+        answer_keys: Optional dict mapping question_id to AnswerKey
+
+    Returns:
+        List of RubricAdjustmentTask objects
+    """
+    answer_keys = answer_keys or {}
+    tasks = []
+    rubric_dict = {r.question_id: r for r in rubrics}
+
+    for adjustment in adjustments:
+        for question_id in adjustment.target_questions:
+            if question_id in rubric_dict:
+                task = RubricAdjustmentTask(
+                    rubric=rubric_dict[question_id],
+                    adjustment=adjustment,
+                    answer_key=answer_keys.get(question_id)
+                )
+                tasks.append(task)
+
+    return tasks

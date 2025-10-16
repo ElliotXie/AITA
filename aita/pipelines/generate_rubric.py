@@ -641,6 +641,171 @@ class RubricGenerationPipeline:
             progress.update(task, completed=True)
             logger.info(f"Saved {len(answer_keys)} answer keys and {len(rubrics)} rubrics")
 
+    def adjust_existing_rubrics(
+        self,
+        exam_spec: ExamSpec,
+        assignment_name: str,
+        adjustment_file: Path,
+        force_regenerate: bool = False
+    ) -> Tuple[List[AnswerKey], List[Rubric]]:
+        """
+        Apply natural language adjustments to existing rubrics.
+
+        Args:
+            exam_spec: ExamSpec object with questions
+            assignment_name: Name of assignment for file organization
+            adjustment_file: Path to text file containing adjustment instructions
+            force_regenerate: Whether to ignore existing checkpoints
+
+        Returns:
+            Tuple of (answer_keys, adjusted_rubrics) lists
+
+        Raises:
+            RubricGenerationError: If adjustment fails
+        """
+        from aita.utils.rubric_adjustment import (
+            parse_user_adjustments,
+            identify_target_questions,
+            create_backup_rubrics,
+            validate_adjustment_compatibility,
+            RubricAdjustmentError
+        )
+        from aita.utils.llm_task_implementations import create_rubric_adjustment_tasks
+
+        console.print(f"\n🔧 [bold cyan]Rubric Adjustment Pipeline[/bold cyan]")
+        console.print(f"   Assignment: {assignment_name}")
+        console.print(f"   Adjustment File: {adjustment_file}")
+        console.print(f"   Questions: {len(exam_spec.questions)}\n")
+
+        try:
+            # Step 1: Check if existing rubrics exist
+            if not self._check_existing_files():
+                raise RubricGenerationError(
+                    "No existing rubrics found. Please run 'aita generate-rubric' first."
+                )
+
+            # Step 2: Load existing rubrics and answer keys
+            answer_keys, existing_rubrics = self._load_existing_files()
+            console.print(f"   📂 Loaded {len(existing_rubrics)} existing rubrics")
+
+            # Step 3: Parse user adjustment instructions
+            adjustment_text = parse_user_adjustments(adjustment_file)
+            console.print(f"   📝 Parsed adjustment instructions ({len(adjustment_text)} characters)")
+
+            # Step 4: Identify target questions using LLM
+            adjustments = identify_target_questions(
+                adjustment_text=adjustment_text,
+                questions=exam_spec.questions,
+                llm_client=self.llm_client
+            )
+            console.print(f"   🎯 Identified {len(adjustments)} adjustments")
+
+            # Step 5: Validate adjustment compatibility
+            errors, warnings = validate_adjustment_compatibility(adjustments, existing_rubrics)
+            if errors:
+                error_msg = "\n".join(f"  - {error}" for error in errors)
+                raise RubricGenerationError(f"Adjustment validation failed:\n{error_msg}")
+
+            if warnings:
+                console.print("[yellow]⚠️  Warnings:[/yellow]")
+                for warning in warnings:
+                    console.print(f"   {warning}")
+
+            # Step 6: Create backup of original rubrics
+            backup_dir = self.rubrics_dir / "adjustment_history"
+            backup_file = create_backup_rubrics(existing_rubrics, backup_dir)
+            console.print(f"   💾 Created backup: {backup_file.name}")
+
+            # Step 7: Apply adjustments using parallel executor
+            answer_key_dict = {ak.question_id: ak for ak in answer_keys}
+            tasks = create_rubric_adjustment_tasks(
+                rubrics=existing_rubrics,
+                adjustments=adjustments,
+                answer_keys=answer_key_dict
+            )
+
+            result = self.executor.execute_batch(
+                tasks=tasks,
+                checkpoint_name=f"rubric_adjustments_{len(tasks)}_tasks",
+                resume_from_checkpoint=not force_regenerate
+            )
+
+            # Step 8: Collect adjusted rubrics
+            adjusted_rubrics = list(existing_rubrics)  # Start with originals
+            rubric_dict = {r.question_id: r for r in adjusted_rubrics}
+
+            successful_adjustments = 0
+            for task_result in result.task_results:
+                if task_result.success:
+                    adjusted_rubric = task_result.result
+                    if isinstance(adjusted_rubric, dict):
+                        adjusted_rubric = Rubric.from_dict(adjusted_rubric)
+
+                    # Replace original with adjusted version
+                    rubric_dict[adjusted_rubric.question_id] = adjusted_rubric
+                    successful_adjustments += 1
+                else:
+                    logger.error(f"Failed to adjust rubric: {task_result.error}")
+
+            adjusted_rubrics = list(rubric_dict.values())
+            console.print(f"   ✅ Successfully adjusted {successful_adjustments}/{len(tasks)} rubrics")
+
+            # Step 9: Save adjusted results
+            self._save_results(answer_keys, answer_keys, adjusted_rubrics)
+            console.print(f"   💾 Saved adjusted rubrics")
+
+            # Step 10: Save adjustment log
+            self._save_adjustment_log(adjustments, adjustment_file, backup_file)
+
+            # Success summary
+            total_points = sum(r.total_points for r in adjusted_rubrics)
+            console.print(f"\n✅ [bold green]Adjustment Complete![/bold green]")
+            console.print(f"   🔧 Applied Adjustments: {len(adjustments)}")
+            console.print(f"   📊 Adjusted Rubrics: {successful_adjustments}")
+            console.print(f"   💯 Total Points: {total_points}")
+            console.print(f"   📁 Backup: {backup_file}\n")
+
+            return answer_keys, adjusted_rubrics
+
+        except RubricAdjustmentError as e:
+            logger.error(f"Rubric adjustment failed: {e}", exc_info=True)
+            raise RubricGenerationError(f"Adjustment failed: {e}") from e
+        except Exception as e:
+            logger.error(f"Rubric adjustment failed: {e}", exc_info=True)
+            raise RubricGenerationError(f"Adjustment failed: {e}") from e
+
+    def _save_adjustment_log(
+        self,
+        adjustments: List,
+        adjustment_file: Path,
+        backup_file: Path
+    ) -> None:
+        """Save a log of the adjustments applied."""
+        from datetime import datetime
+        import json
+
+        log_data = {
+            "timestamp": datetime.now().isoformat(),
+            "adjustment_file": str(adjustment_file),
+            "backup_file": str(backup_file),
+            "adjustments": [
+                {
+                    "target_questions": adj.target_questions,
+                    "adjustment_type": adj.adjustment_type,
+                    "description": adj.description
+                }
+                for adj in adjustments
+            ]
+        }
+
+        log_file = self.rubrics_dir / "adjustment_history" / f"adjustment_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(log_file, 'w', encoding='utf-8') as f:
+            json.dump(log_data, f, indent=2, ensure_ascii=False)
+
+        logger.info(f"Saved adjustment log to {log_file}")
+
 
 # Factory and convenience functions
 
@@ -919,6 +1084,7 @@ def generate_rubrics_for_assignment(
     assignment_name: str = "exam1",
     user_rubrics_file: Optional[str] = None,
     instructions_file: Optional[str] = None,
+    useradjust_file: Optional[str] = None,
     force_regenerate: bool = False,
     data_dir: Optional[Path] = None
 ) -> Tuple[List[AnswerKey], List[Rubric]]:
@@ -929,6 +1095,7 @@ def generate_rubrics_for_assignment(
         assignment_name: Name of assignment
         user_rubrics_file: Optional path to user-provided rubrics JSON
         instructions_file: Optional path to grading instructions text file
+        useradjust_file: Optional path to natural language adjustment instructions
         force_regenerate: Whether to regenerate existing files
         data_dir: Optional data directory
 
@@ -941,6 +1108,12 @@ def generate_rubrics_for_assignment(
         ...     instructions_file="grading_instructions.txt"
         ... )
         >>> print(f"Generated {len(answer_keys)} answer keys and {len(rubrics)} rubrics")
+
+        # Apply adjustments to existing rubrics
+        >>> answer_keys, rubrics = generate_rubrics_for_assignment(
+        ...     assignment_name="BMI541_Midterm",
+        ...     useradjust_file="rubric_adjustments.txt"
+        ... )
     """
     pipeline = create_rubric_generation_pipeline(assignment_name, data_dir)
 
@@ -949,14 +1122,24 @@ def generate_rubrics_for_assignment(
     if not exam_spec:
         raise RubricGenerationError("No exam specification found. Run question extraction first.")
 
-    # Convert string paths to Path objects
-    user_rubrics_path = Path(user_rubrics_file) if user_rubrics_file else None
-    instructions_path = Path(instructions_file) if instructions_file else None
+    # Check if this is an adjustment operation
+    if useradjust_file:
+        adjustment_path = Path(useradjust_file)
+        return pipeline.adjust_existing_rubrics(
+            exam_spec=exam_spec,
+            assignment_name=assignment_name,
+            adjustment_file=adjustment_path,
+            force_regenerate=force_regenerate
+        )
+    else:
+        # Regular generation
+        user_rubrics_path = Path(user_rubrics_file) if user_rubrics_file else None
+        instructions_path = Path(instructions_file) if instructions_file else None
 
-    return pipeline.generate_from_exam_spec(
-        exam_spec=exam_spec,
-        assignment_name=assignment_name,
-        user_rubrics_file=user_rubrics_path,
-        instructions_file=instructions_path,
-        force_regenerate=force_regenerate
-    )
+        return pipeline.generate_from_exam_spec(
+            exam_spec=exam_spec,
+            assignment_name=assignment_name,
+            user_rubrics_file=user_rubrics_path,
+            instructions_file=instructions_path,
+            force_regenerate=force_regenerate
+        )

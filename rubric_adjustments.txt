@@ -1,0 +1,23 @@
+q1a
+normalizeatioon 1pts
+inverse 1pts
+get the standard normalized 1pts
+
+q1b
+figure out p=0.012 1 pts
+figure out it is binomical 1pts
+write out teh correct formula at the beiggiing 1pts
+final answer correct 1pts
+
+q2
+if student get the binomial formula 1pts
+   if get the inal answer 1pts
+   if know to hypotehsis a p 1pts
+   if know let the reuslts =0.95 1pts
+
+
+q5
+get the new lambda 1pts
+final answer 1pts
+know that it is possion 1pts
+list the corect formular 1pts

@@ -1,0 +1,4 @@
+q1a
+normalization check 1 pts
+inverse calculation 1 points
+final answer format 1 score

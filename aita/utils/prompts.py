@@ -343,3 +343,218 @@ Question Type: {question.question_type.value}
         f"{question_info}\n"
         f"Raw grading notes:\n{raw_notes}"
     )
+
+
+RUBRIC_ADJUSTMENT_IDENTIFICATION_PROMPT = """
+You are an expert grading assistant helping to parse natural language instructions for adjusting exam rubrics.
+
+Your task is to analyze user instructions and identify:
+1. Which specific questions they want to modify
+2. What type of adjustment they want to make
+3. The level of specification provided by the user
+
+ADJUSTMENT TYPE CLASSIFICATION:
+- **intelligent_replacement**: User provides criteria (with or without points) that should intelligently replace/complete the rubric
+- **add_criterion**: User wants to add specific criteria to existing rubric
+- **modify_points**: User wants to change point distribution
+- **clarify_description**: User wants to improve descriptions without structural changes
+
+SPECIFICATION LEVEL DETECTION:
+- **complete_with_points**: User provides all criteria with specific point values
+- **partial_with_points**: User provides some criteria with points, others missing
+- **conceptual_only**: User mentions criteria concepts without specific points
+- **point_mismatch**: User's specified points don't match the original question total
+
+Parse the user's adjustment instructions and return a structured JSON response:
+
+Format your response as JSON:
+{
+  "adjustments": [
+    {
+      "target_questions": ["question_id1", "question_id2"],
+      "adjustment_type": "string (intelligent_replacement, add_criterion, modify_points, clarify_description)",
+      "specification_level": "string (complete_with_points, partial_with_points, conceptual_only, point_mismatch)",
+      "description": "string (clear description of what to change)",
+      "user_criteria": [
+        {
+          "description": "string (user's description, however brief)",
+          "points": number or null,
+          "priority": "high/medium/low"
+        }
+      ],
+      "total_points_specified": number or null
+    }
+  ]
+}
+
+Guidelines:
+- Be specific about which questions are referenced
+- Use EXACT question IDs from the available questions list (e.g., "1a", "1b", "2", "5", NOT "Question 1a")
+- If a question is mentioned as "question 1a" or "Q1a", map it to just "1a"
+- If instructions are general (e.g., "all calculation questions"), identify all matching questions
+- When user lists multiple criteria with points for a question, use adjustment_type: "complete_replacement"
+- Break down complex instructions into multiple specific adjustments
+- Preserve the intent and specificity of the user's instructions
+- CRITICAL: target_questions must contain only the exact question_id values, not prefixed with "Question"
+"""
+
+
+RUBRIC_ADJUSTMENT_APPLICATION_PROMPT = """
+You are an expert grading assistant creating intelligent rubric adjustments that are faithful to user input while being helpful and robust.
+
+You will receive:
+1. The current rubric for a question
+2. A specific adjustment instruction with user specifications
+3. Optional answer key context
+
+POINT NOTATION FLEXIBILITY:
+Accept and normalize these equivalent terms: "pts", "points", "score", "pt" (all case-insensitive)
+
+CORE DECISION LOGIC - REPLACE vs MERGE:
+
+**COMPLETE SPECIFICATION → REPLACE ENTIRELY**:
+- If user provides criteria that sum to the original question's total points
+- User has provided a complete rubric specification
+- Action: Replace the entire rubric with user's criteria (expanded and enhanced)
+
+**PARTIAL SPECIFICATION → INTELLIGENT MERGE**:
+- If user provides criteria that sum to LESS than the original total points
+- User has provided partial rubric guidance
+- Action: Keep user criteria exactly as specified, complete the rubric by:
+  - Adding complementary criteria from the original rubric (adjusted/modified as needed)
+  - Ensuring total points match the original question total
+  - Maintaining logical flow and avoiding duplication
+
+**OVER-SPECIFICATION → USE USER TOTAL**:
+- If user provides criteria that sum to MORE than original total
+- User may be requesting a point total change
+- Action: Use user's total if reasonable, otherwise discuss in output
+
+INTELLIGENT ADJUSTMENT GUIDELINES:
+
+1. **PRESERVE USER INTENT**: User-specified criteria are sacred and must be included exactly
+2. **EXPAND CONCISE DESCRIPTIONS**: Transform brief user criteria ("normalization 1pts") into full, actionable descriptions
+3. **SMART COMPLETION**: When merging, select the most relevant original criteria to complete the rubric
+4. **AVOID DUPLICATION**: Don't duplicate concepts between user criteria and completed criteria
+
+POINT DISTRIBUTION LOGIC:
+- User-specified points are NEVER changed
+- Remaining points (original total - user total) are distributed among completion criteria
+- Each criterion must have positive points
+
+Format your response as JSON:
+{
+  "question_id": "string",
+  "total_points": number,
+  "adjustment_strategy": "string (complete_replace|intelligent_merge|use_user_total)",
+  "reasoning": "string (brief explanation of why this strategy was chosen)",
+  "criteria": [
+    {
+      "points": number,
+      "description": "string (clear, specific description)",
+      "examples": ["string (examples of work that earns these points)"],
+      "source": "string (user_specified|original_adapted|completion)"
+    }
+  ]
+}
+
+CRITICAL REQUIREMENTS:
+- The sum of all criteria points MUST EXACTLY EQUAL the total_points value
+- Each criterion must have positive points
+- User-specified criteria must be preserved exactly and expanded, never changed
+- Descriptions must be clear and actionable for graders
+- Add examples that illustrate what earns full/partial credit
+- Include "source" field to track origin of each criterion
+
+DECISION EXAMPLES:
+- **User provides 3pts for 3pt question**: complete_replace → Use only user criteria (expanded)
+- **User provides 2pts for 5pt question**: intelligent_merge → Keep user 2pts + add 3pts from original rubric
+- **User provides 6pts for 3pt question**: use_user_total → Use user's 6pt total (question total increased)
+- **User says "check normalization" (no points)**: intelligent_merge → Distribute original total logically
+"""
+
+
+def get_rubric_adjustment_identification_prompt(
+    adjustment_text: str,
+    question_context: str
+) -> str:
+    """Generate prompt for identifying target questions from user adjustments."""
+    return f"""{RUBRIC_ADJUSTMENT_IDENTIFICATION_PROMPT}
+
+Available Questions:
+{question_context}
+
+User Adjustment Instructions:
+{adjustment_text}
+
+Please analyze the instructions and identify which questions to modify and how."""
+
+
+def get_rubric_adjustment_application_prompt(
+    current_rubric: dict,
+    adjustment,
+    answer_key = None
+) -> str:
+    """Generate prompt for applying specific adjustment to a rubric."""
+    # Format current rubric
+    rubric_text = f"""
+Current Rubric for {current_rubric['question_id']} ({current_rubric['total_points']} points):
+"""
+    for i, criterion in enumerate(current_rubric.get('criteria', []), 1):
+        rubric_text += f"\n{i}. {criterion['points']} points: {criterion['description']}"
+        if criterion.get('examples'):
+            rubric_text += f"\n   Examples: {', '.join(criterion['examples'])}"
+
+    # Format adjustment with intelligent context
+    adjustment_text = f"""
+Adjustment to Apply:
+Type: {adjustment.adjustment_type}
+Specification Level: {adjustment.specification_level}
+Description: {adjustment.description}
+"""
+
+    # Add user criteria information
+    if hasattr(adjustment, 'user_criteria') and adjustment.user_criteria:
+        adjustment_text += "\nUser-Specified Criteria:\n"
+        user_total = 0
+        for i, criterion in enumerate(adjustment.user_criteria, 1):
+            points_text = f" ({criterion.points} points)" if criterion.points is not None else " (points not specified)"
+            adjustment_text += f"{i}. {criterion.description}{points_text}\n"
+            if criterion.points is not None:
+                user_total += criterion.points
+
+        if user_total > 0:
+            adjustment_text += f"Total User-Specified Points: {user_total}\n"
+
+    if hasattr(adjustment, 'total_points_specified') and adjustment.total_points_specified:
+        adjustment_text += f"User's Target Total Points: {adjustment.total_points_specified}\n"
+
+    # Legacy support
+    if hasattr(adjustment, 'criteria_changes') and adjustment.criteria_changes:
+        adjustment_text += "\nLegacy Criteria Changes:\n"
+        for change in adjustment.criteria_changes:
+            adjustment_text += f"- {change.get('action', 'modify')}: {change.get('description', '')}"
+            if change.get('points'):
+                adjustment_text += f" ({change['points']} points)"
+            adjustment_text += "\n"
+
+    if hasattr(adjustment, 'point_changes') and adjustment.point_changes:
+        adjustment_text += f"\nLegacy Point Changes: {adjustment.point_changes}\n"
+
+    # Add answer key context if available
+    answer_key_section = ""
+    if answer_key:
+        answer_key_section = f"""
+
+Answer Key Context:
+Correct Answer: {getattr(answer_key, 'correct_answer', 'N/A')}
+Explanation: {getattr(answer_key, 'explanation', 'N/A')}
+"""
+
+    return f"""{RUBRIC_ADJUSTMENT_APPLICATION_PROMPT}
+
+{rubric_text}
+
+{adjustment_text}{answer_key_section}
+
+Please apply the adjustment to create an improved rubric."""

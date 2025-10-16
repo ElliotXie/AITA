@@ -75,13 +75,33 @@ aita generate-rubric --instructions grading_rules.txt
 # Use user-provided rubrics for some questions
 aita generate-rubric --user-rubrics my_rubrics.json
 
+# Apply natural language adjustments to existing rubrics
+aita generate-rubric --useradjust rubric_adjustments.txt
+
 # Force regeneration
 aita generate-rubric --force
 ```
 
+**Adjusting Existing Rubrics**:
+After generating initial rubrics, you can refine them using natural language instructions:
+
+1. Create an adjustment file with your instructions:
+```bash
+echo "For question 1a and 1b about derivatives, add 2 points for showing work.
+Question 2 needs clearer partial credit - split the 10 points into 3 for approach,
+4 for calculation, and 3 for final answer.
+Add a criterion for question 3 that awards 1 point for correct units." > rubric_adjustments.txt
+```
+
+2. Apply the adjustments:
+```bash
+aita generate-rubric --useradjust rubric_adjustments.txt
+```
+
 **Output**:
-- `intermediateproduct/rubrics/generated_rubrics.json`
+- `intermediateproduct/rubrics/generated_rubrics.json` (updated with adjustments)
 - `intermediateproduct/rubrics/generated_answer_keys.json`
+- `intermediateproduct/rubrics/adjustment_history/` (backup and logs)
 
 ---
 

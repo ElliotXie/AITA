@@ -316,6 +316,16 @@ def generate_rubric(
         dir_okay=False,
         readable=True
     ),
+    useradjust: Optional[Path] = typer.Option(
+        None,
+        "--useradjust",
+        "-u",
+        help="Path to text file containing natural language adjustments to apply to existing rubrics",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True
+    ),
     data_dir: Optional[Path] = typer.Option(
         None,
         "--data-dir",
@@ -361,6 +371,9 @@ def generate_rubric(
         # Use user-provided rubrics for some questions
         aita generate-rubric --user-rubrics my_rubrics.json
 
+        # Apply natural language adjustments to existing rubrics
+        aita generate-rubric --useradjust rubric_adjustments.txt
+
         # Force regeneration
         aita generate-rubric --force --assignment "BMI541_Midterm"
     """
@@ -397,6 +410,7 @@ def generate_rubric(
         console.print(f"  Assignment: {assignment_name}")
         console.print(f"  User Rubrics: {user_rubrics or 'None'}")
         console.print(f"  Instructions: {instructions or 'None'}")
+        console.print(f"  User Adjustments: {useradjust or 'None'}")
         console.print(f"  Force Regenerate: {force}")
         console.print(f"  Verbose: {verbose}")
         console.print(f"  Dry Run: {dry_run}\n")
@@ -406,12 +420,21 @@ def generate_rubric(
             _show_rubric_dry_run_info(data_dir, user_rubrics, instructions)
             return
 
+        # Validate conflicting options
+        if useradjust and (user_rubrics or instructions):
+            console.print("[red]Error:[/red] --useradjust cannot be used with --user-rubrics or --instructions")
+            console.print("Use --useradjust to modify existing rubrics, or use other options for initial generation.")
+            raise typer.Exit(1)
+
+        # Determine operation type for confirmation message
+        operation_type = "adjust existing rubrics" if useradjust else "generate rubrics"
+
         # Confirm before processing
         if not typer.confirm(
-            "This will generate rubrics and may incur LLM API costs. Continue?",
+            f"This will {operation_type} and may incur LLM API costs. Continue?",
             default=True
         ):
-            console.print("[yellow]Rubric generation cancelled.[/yellow]")
+            console.print(f"[yellow]Rubric {operation_type.split()[0]} cancelled.[/yellow]")
             raise typer.Exit(0)
 
         # Generate rubrics
@@ -419,6 +442,7 @@ def generate_rubric(
             assignment_name=assignment_name,
             user_rubrics_file=str(user_rubrics) if user_rubrics else None,
             instructions_file=str(instructions) if instructions else None,
+            useradjust_file=str(useradjust) if useradjust else None,
             force_regenerate=force,
             data_dir=data_dir
         )

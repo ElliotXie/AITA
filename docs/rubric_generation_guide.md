@@ -148,10 +148,91 @@ The system applies user inputs in this priority order:
 | `--assignment, -a` | Assignment name (default: "exam1") |
 | `--user-rubrics, -r` | Path to user-provided rubrics JSON file |
 | `--instructions, -i` | Path to grading instructions text file |
+| `--useradjust, -u` | Path to natural language adjustment instructions |
 | `--data-dir, -d` | Data directory containing exam specification |
 | `--force, -f` | Force regeneration even if rubrics exist |
 | `--verbose, -v` | Enable verbose logging |
 | `--dry-run` | Preview what would be generated |
+
+## Rubric Adjustments
+
+The `--useradjust` option allows you to iteratively refine existing rubrics using natural language instructions. This feature is particularly useful after reviewing generated rubrics and identifying areas for improvement.
+
+### How It Works
+
+1. **Generate Initial Rubrics**: First run the standard rubric generation
+2. **Create Adjustment File**: Write natural language instructions describing desired changes
+3. **Apply Adjustments**: Use `--useradjust` to intelligently update rubrics
+4. **Review Changes**: Check the updated rubrics and adjustment logs
+
+### Adjustment File Format
+
+Create a plain text file with natural language instructions:
+
+```text
+For question 1a and 1b about derivatives, add 2 points for showing work.
+
+Question 2 needs clearer partial credit - split the 10 points into:
+- 3 points for correct approach/setup
+- 4 points for accurate calculation
+- 3 points for final answer
+
+Add a criterion for question 3 that awards 1 point for including correct units.
+
+Questions 4a through 4c should have more emphasis on explanation - increase
+the explanation component from 2 to 4 points and reduce calculation points accordingly.
+```
+
+### Examples
+
+```bash
+# Initial generation
+aita generate-rubric --assignment "calculus_midterm"
+
+# After review, apply adjustments
+aita generate-rubric --assignment "calculus_midterm" --useradjust adjustments.txt
+
+# Apply additional refinements
+echo "Question 5 should award partial credit for dimensional analysis" >> adjustments.txt
+aita generate-rubric --assignment "calculus_midterm" --useradjust adjustments.txt
+```
+
+### Adjustment Types Supported
+
+- **Add Criteria**: "Add a criterion for showing work (2 points)"
+- **Modify Points**: "Increase question 2 from 10 to 12 points"
+- **Split Criteria**: "Split the 6-point calculation into setup (2 pts) and execution (4 pts)"
+- **Clarify Descriptions**: "Make the explanation criteria more specific"
+- **Redistribute Points**: "Move 1 point from calculation to explanation"
+
+### Safety Features
+
+- **Automatic Backup**: Original rubrics are backed up before changes
+- **Point Validation**: Ensures criteria points always sum to question totals
+- **Audit Trail**: All adjustments are logged with timestamps
+- **Rollback Capability**: Backups allow reverting to previous versions
+
+### Output Structure
+
+After adjustments, you'll find:
+
+```
+intermediateproduct/rubrics/
+├── generated_rubrics.json              # Updated rubrics
+├── generated_answer_keys.json          # Original answer keys
+├── adjustment_history/
+│   ├── rubrics_backup_20250116_143022.json    # Original rubrics
+│   └── adjustment_log_20250116_143022.json    # Change log
+└── user_adjustments.txt               # Latest adjustment instructions
+```
+
+### Best Practices
+
+1. **Be Specific**: Reference exact question IDs and point values
+2. **One Change Per Line**: Separate different adjustments for clarity
+3. **Review First**: Always review generated rubrics before adjusting
+4. **Test Incrementally**: Make small adjustments and verify results
+5. **Keep Records**: Save adjustment files for documentation
 
 ## Answer Key Format
 

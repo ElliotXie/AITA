@@ -1,0 +1,5 @@
+q1a
+normalization 2pts
+inverse 2points
+formula setup 1pt
+final answer 1pt
